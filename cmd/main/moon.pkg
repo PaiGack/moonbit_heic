@@ -1,0 +1,5 @@
+// import {
+//   "username/workspace" @lib,
+// }
+
+pkgtype(kind: "executable")
