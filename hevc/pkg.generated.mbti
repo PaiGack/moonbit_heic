@@ -1,0 +1,231 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "username/workspace/hevc"
+
+// Values
+pub fn default_scaling_list() -> ScalingList
+
+pub fn marshal_annex_b(Array[NALUnit]) -> Bytes
+
+pub fn marshal_hvcc(Array[NALUnit], Int32) -> Bytes?
+
+pub fn marshal_nal(NALUnit) -> Bytes
+
+pub fn parse_nal(Bytes) -> NALUnit?
+
+pub fn parse_pps(Bytes) -> PPS raise
+
+pub fn parse_sps(Bytes) -> SPS raise
+
+pub fn parse_vps(Bytes) -> VPS raise
+
+pub fn profile_tier_level_bytes(Bytes) -> Bytes?
+
+pub fn split_annex_b(Bytes) -> Array[NALUnit]
+
+pub fn split_hvcc(Bytes, Int32) -> Array[NALUnit]
+
+pub fn sps_format(Bytes) -> (Int32, Int32, Int32)?
+
+// Errors
+pub suberror Invalid
+
+pub suberror Unsupported
+
+// Types and methods
+pub(all) enum NALType {
+  TrailN
+  TrailR
+  TsaN
+  TsaR
+  StsaN
+  StsaR
+  RadlN
+  RadlR
+  RaslN
+  RaslR
+  BlaWLp
+  BlaWRadl
+  BlaNLp
+  IdrWRadl
+  IdrNLp
+  Cra
+  Vps
+  Sps
+  Pps
+  Aud
+  Eos
+  Eob
+  Fd
+  PrefixSei
+  SuffixSei
+}
+pub fn NALType::code(Self) -> Int32
+pub fn NALType::from_code(Int32) -> Self?
+pub fn NALType::is_idr(Self) -> Bool
+pub fn NALType::is_irap(Self) -> Bool
+pub fn NALType::is_vcl(Self) -> Bool
+
+pub(all) struct NALUnit {
+  type_ : Int32
+  layer_id : Int32
+  temporal_id : Int32
+  rbsp : Bytes
+  epb : Array[Int32]
+}
+pub fn NALUnit::nal_offset(Self, Int32) -> Int32
+pub fn NALUnit::nal_type(Self) -> NALType?
+pub fn NALUnit::rbsp_offset(Self, Int32) -> Int32
+
+pub(all) struct PPS {
+  mut id : Int32
+  mut sps_id : Int32
+  mut dependent_slice_segments_enabled : Bool
+  mut output_flag_present : Bool
+  mut num_extra_slice_header_bits : Int32
+  mut sign_data_hiding_enabled : Bool
+  mut cabac_init_present : Bool
+  mut num_ref_idx_l0_default_active : Int32
+  mut num_ref_idx_l1_default_active : Int32
+  mut init_qp : Int32
+  mut constrained_intra_pred : Bool
+  mut transform_skip_enabled : Bool
+  mut cu_qp_delta_enabled : Bool
+  mut diff_cu_qp_delta_depth : Int32
+  mut cb_qp_offset : Int32
+  mut cr_qp_offset : Int32
+  mut slice_chroma_qp_offsets : Bool
+  mut weighted_pred : Bool
+  mut weighted_bipred : Bool
+  mut transquant_bypass : Bool
+  mut tiles_enabled : Bool
+  mut entropy_coding_sync : Bool
+  mut num_tile_columns : Int32
+  mut num_tile_rows : Int32
+  mut uniform_spacing : Bool
+  mut column_width_minus1 : Array[Int32]
+  mut row_height_minus1 : Array[Int32]
+  mut loop_filter_across_tiles : Bool
+  mut col_widths_in_ctbs : Array[Int32]
+  mut row_heights_in_ctbs : Array[Int32]
+  mut loop_filter_across_slices : Bool
+  mut deblocking_control_present : Bool
+  mut deblocking_override : Bool
+  mut deblocking_disabled : Bool
+  mut beta_offset_div2 : Int32
+  mut tc_offset_div2 : Int32
+  mut scaling_list_present : Bool
+  mut scaling_list : ScalingList
+  mut lists_modification_present : Bool
+  mut log2_parallel_merge_level : Int32
+  mut slice_header_extension_present : Bool
+  mut log2_max_transform_skip_size : Int32
+  mut cross_component_prediction : Bool
+  mut chroma_qp_offset_list : Bool
+  mut diff_cu_chroma_qp_offset_depth : Int32
+  mut chroma_qp_offset_list_len : Int32
+  mut cb_qp_offset_list : Array[Int32]
+  mut cr_qp_offset_list : Array[Int32]
+  mut log2_sao_offset_scale_luma : Int32
+  mut log2_sao_offset_scale_chroma : Int32
+}
+pub fn PPS::resolve_tile_geometry(Self, SPS) -> Unit raise
+
+pub(all) struct ProfileTierLevel {
+  mut profile_space : Int32
+  mut tier_flag : Bool
+  mut profile_idc : Int32
+  mut level_idc : Int32
+  mut compat_flags : UInt32
+}
+
+pub(all) struct SPS {
+  mut vps_id : Int32
+  mut max_sub_layers_minus1 : Int32
+  mut temporal_id_nesting : Bool
+  mut ptl : ProfileTierLevel
+  mut id : Int32
+  mut chroma_format_idc : Int32
+  mut separate_colour_plane : Bool
+  mut sub_width_c : Int32
+  mut sub_height_c : Int32
+  mut pic_width_in_luma_samples : Int32
+  mut pic_height_in_luma_samples : Int32
+  mut conf_win_left : Int32
+  mut conf_win_right : Int32
+  mut conf_win_top : Int32
+  mut conf_win_bottom : Int32
+  mut bit_depth_luma : Int32
+  mut bit_depth_chroma : Int32
+  mut colour_primaries : Int32
+  mut transfer_characteristics : Int32
+  mut matrix_coefficients : Int32
+  mut full_range : Bool
+  mut log2_max_poc_lsb : Int32
+  mut max_dec_pic_buffering : Int32
+  mut max_num_reorder_pics : Int32
+  mut max_latency_increase : Int32
+  mut min_cb_log2_size_y : Int32
+  mut ctb_log2_size_y : Int32
+  mut ctb_size_y : Int32
+  mut min_tb_log2_size_y : Int32
+  mut max_tb_log2_size_y : Int32
+  mut max_tr_hier_inter : Int32
+  mut max_tr_hier_intra : Int32
+  mut pic_width_in_ctbs : Int32
+  mut pic_height_in_ctbs : Int32
+  mut scaling_list_enabled : Bool
+  mut scaling_list : ScalingList
+  mut amp_enabled : Bool
+  mut sao_enabled : Bool
+  mut pcm_enabled : Bool
+  mut pcm_bit_depth_luma : Int32
+  mut pcm_bit_depth_chroma : Int32
+  mut log2_min_pcm_cb_size : Int32
+  mut log2_max_pcm_cb_size : Int32
+  mut pcm_loop_filter_disabled : Bool
+  mut st_rps : Array[ShortTermRPS]
+  mut long_term_ref_pics_present : Bool
+  mut lt_ref_pic_poc_lsb : Array[Int32]
+  mut used_by_curr_pic_lt : Array[Bool]
+  mut temporal_mvp_enabled : Bool
+  mut strong_intra_smoothing : Bool
+  mut transform_skip_rotation : Bool
+  mut transform_skip_context : Bool
+  mut implicit_rdpcm : Bool
+  mut explicit_rdpcm : Bool
+  mut extended_precision : Bool
+  mut intra_smoothing_disabled : Bool
+  mut high_precision_offsets : Bool
+  mut persistent_rice_adaptation : Bool
+  mut cabac_bypass_alignment : Bool
+}
+pub fn SPS::cropped_height(Self) -> Int32
+pub fn SPS::cropped_width(Self) -> Int32
+
+pub(all) struct ScalingList {
+  sl : Array[Array[Array[Int32]]]
+  dc : Array[Array[Int32]]
+}
+
+pub(all) struct ShortTermRPS {
+  delta_poc_s0 : Array[Int32]
+  delta_poc_s1 : Array[Int32]
+  used_s0 : Array[Bool]
+  used_s1 : Array[Bool]
+}
+pub fn ShortTermRPS::num_delta_pocs(Self) -> Int32
+
+pub(all) struct VPS {
+  mut id : Int32
+  mut max_layers_minus1 : Int32
+  mut max_sub_layers_minus1 : Int32
+  mut temporal_id_nesting : Bool
+  mut ptl : ProfileTierLevel
+  mut max_dec_pic_buffering : Array[Int32]
+  mut max_num_reorder_pics : Array[Int32]
+  mut max_latency_increase : Array[Int32]
+}
+
+// Type aliases
+
+// Traits

@@ -3,11 +3,6 @@
 //
 // To add a dependency, run this command in your terminal:
 //   moon add moonbitlang/x
-//
-// Or manually declare it in `import`, for example:
-// import {
-//   "moonbitlang/x@0.4.6",
-// }
 
 name = "username/workspace"
 
@@ -19,8 +14,8 @@ repository = ""
 
 license = "Apache-2.0"
 
-keywords = []
+keywords = [ "hevc", "h265", "codec" ]
 
 preferred_target = "wasm"
 
-description = ""
+description = "MoonBit port of gen2brain/h265: HEVC bitstream headers and NAL parsing"

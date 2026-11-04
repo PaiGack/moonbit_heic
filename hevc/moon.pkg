@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/core/cmp",
+}
+
+import {
+  "username/workspace/hevc",
+} for "test"
+
+pkgtype(kind: "library")
