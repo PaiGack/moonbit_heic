@@ -2,17 +2,176 @@
 package "nrzhangsan/heic/heif"
 
 // Values
+pub fn crop_rect(Array[Int64], Int64, Int64) -> CleanAperture?
+
+pub fn each_box(Bytes, Int64) -> BoxWalk
+
+pub fn is_alpha_urn(String) -> Bool
+
+pub fn parse(Bytes) -> Result[HeifFile, HeifError]
+
+pub fn parse_meta(Bytes) -> Meta raise Invalid
+
 pub fn read_full_box_header(UInt32) -> FullBoxHeader
 
+pub fn sign_extend_32(Int64) -> Int64
+
 // Errors
+pub suberror HeifError {
+  Invalid
+  Unsupported
+  NoThumbnail
+}
+
 pub suberror Invalid
+
+pub suberror NoThumbnail
 
 pub suberror Unsupported
 
 // Types and methods
+pub(all) struct BoxView {
+  typ : String
+  payload : Bytes
+  offset : Int64
+}
+
+pub(all) struct BoxWalk {
+  boxes : Array[BoxView]
+  truncated : Bool
+}
+pub fn BoxWalk::is_clean(Self) -> Bool
+
+pub(all) struct CleanAperture {
+  width : Int64
+  height : Int64
+  horiz_off : Int64
+  vert_off : Int64
+}
+
+pub(all) struct ColorInfo {
+  mut primaries : Int32
+  mut transfer : Int32
+  mut matrix : Int32
+  mut full_range : Bool
+  mut icc : Bytes?
+  mut has_nclx : Bool
+}
+
+pub(all) enum ColrKind {
+  Nclx
+  ICC
+}
+
+pub(all) struct Extent {
+  off : Int64
+  len : Int64
+}
+
 pub(all) struct FullBoxHeader {
   version : Int32
   flags : Int32
+}
+
+pub(all) struct GridInfo {
+  rows : Int32
+  cols : Int32
+  width : Int64
+  height : Int64
+}
+
+pub(all) struct HEVCConfig {
+  chroma_format : Int32
+  bit_depth_luma : Int32
+  bit_depth_chroma : Int32
+  length_size : Int32
+  param_sets : Array[Bytes]
+  profile_idc : Int32
+  level_idc : Int32
+}
+
+pub(all) struct HeifFile {
+  ftyp : BoxView?
+  meta : Meta
+  data : Bytes
+}
+pub fn HeifFile::alpha_of(Self, Int64) -> Item?
+pub fn HeifFile::describe_item(Self, Int64) -> Result[ImageItem, HeifError]
+pub fn HeifFile::grid_info(Self, Int64) -> Result[GridInfo, HeifError]
+pub fn HeifFile::grid_tiles(Self, Int64) -> Result[Array[Int64], HeifError]
+pub fn HeifFile::is_hevc(Self) -> Bool
+pub fn HeifFile::item_payload(Self, Int64) -> Result[Bytes, HeifError]
+pub fn HeifFile::major_brand(Self) -> String
+pub fn HeifFile::primary_image(Self) -> Result[ImageItem, HeifError]
+pub fn HeifFile::primary_image_offset(Self) -> Int64
+pub fn HeifFile::primary_item(Self) -> Result[Item, HeifError]
+pub fn HeifFile::thumbnail_of(Self, Int64) -> Result[Item, HeifError]
+
+pub(all) struct ImageItem {
+  id : Int64
+  item_type : String
+  width : Int64
+  height : Int64
+  stored_width : Int64
+  stored_height : Int64
+  aperture : CleanAperture?
+  bit_depth : Int32
+  chroma_bit_depth : Int32
+  chroma_format : Int32
+  color : ColorInfo
+  hvc_c : HEVCConfig?
+  payload : Bytes
+  transform : Transform
+  grid : GridInfo?
+  tiles : Array[Int64]
+  alpha : Int64?
+}
+
+pub(all) struct Item {
+  mut id : Int64
+  mut typ : String
+  mut content_type : String
+  mut extents : Array[Extent]
+  mut construction : Int32
+  mut base_offset : Int64
+  mut props : Array[(Int32, Bool)]
+  mut unsupported : Bool
+}
+
+pub(all) struct ItemRef {
+  typ : String
+  from : Int64
+  to : Array[Int64]
+}
+
+pub(all) struct Meta {
+  mut primary : Int64
+  mut order : Array[Int64]
+  mut items : Map[Int64, Item]
+  mut props : Array[Property]
+  mut refs : Array[ItemRef]
+  mut idat : Bytes
+}
+pub fn Meta::prop(Self, Item, String) -> Property?
+pub fn Meta::refs_to(Self, String, Int64) -> Array[Int64]
+
+pub(all) struct Property {
+  mut typ : String
+  mut width : Int64
+  mut height : Int64
+  mut hvc_c : HEVCConfig?
+  mut pixi : Array[Int32]
+  mut aux_c : String
+  mut angle : Int32
+  mut axis : Int32
+  mut clap : Array[Int64]
+  mut colr : ColorInfo?
+  mut colr_kind : ColrKind
+}
+
+pub(all) struct Transform {
+  angle : Int32
+  mirror : Int32?
 }
 
 // Type aliases
