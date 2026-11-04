@@ -12,15 +12,15 @@ pub suberror NotYetImplemented
 
 // Types and methods
 pub(all) struct FrameBuffer {
-  width : Int32
-  height : Int32
+  width : Int64
+  height : Int64
   sub_width_c : Int32
   sub_height_c : Int32
-  luma_size : Int32
-  chroma_size : Int32
+  luma_size : Int64
+  chroma_size : Int64
 }
-pub fn FrameBuffer::new(Int32, Int32, Int32, Int32) -> Self raise @safe.Overflow
-pub fn FrameBuffer::total_size(Self) -> Int32 raise @safe.Overflow
+pub fn FrameBuffer::new(Int64, Int64, Int32, Int32) -> Self raise @safe.Overflow
+pub fn FrameBuffer::total_size(Self) -> Int64
 
 // Type aliases
 

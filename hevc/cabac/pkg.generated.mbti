@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn context_table_size(Int32) -> Int32 raise @safe.Overflow
+pub fn context_table_size(Int32) -> Int64 raise @safe.Overflow
 
 // Errors
 pub suberror NotYetImplemented

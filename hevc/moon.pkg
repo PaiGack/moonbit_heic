@@ -1,5 +1,6 @@
 import {
   "moonbitlang/core/cmp",
+  "nrzhangsan/heic/safe",
 }
 
 import {

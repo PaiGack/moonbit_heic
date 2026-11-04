@@ -29,8 +29,8 @@ pub(all) struct PPS {
   mut column_width_minus1 : Array[Int32]
   mut row_height_minus1 : Array[Int32]
   mut loop_filter_across_tiles : Bool
-  mut col_widths_in_ctbs : Array[Int32]
-  mut row_heights_in_ctbs : Array[Int32]
+  mut col_widths_in_ctbs : Array[Int64]
+  mut row_heights_in_ctbs : Array[Int64]
   mut loop_filter_across_slices : Bool
   mut deblocking_control_present : Bool
   mut deblocking_override : Bool
@@ -259,41 +259,46 @@ pub fn PPS::resolve_tile_geometry(self : PPS, sps : SPS) -> Unit raise Error {
     return
   }
 
-  if self.num_tile_columns > w || self.num_tile_rows > h {
+  // The tile counts are bounded by the picture in CTBs, so comparing them is
+  // a comparison of `Int` against `Int64` and not an arithmetic step.
+  if self.num_tile_columns.to_int64() > w || self.num_tile_rows.to_int64() > h {
     raise Invalid
   }
 
-  let cols = Array::make(self.num_tile_columns, 0)
-  let rows = Array::make(self.num_tile_rows, 0)
+  let cols : Array[Int64] = Array::make(self.num_tile_columns, 0L)
+  let rows : Array[Int64] = Array::make(self.num_tile_rows, 0L)
 
   if self.uniform_spacing {
     for i in 0..<self.num_tile_columns {
-      cols[i] = (i + 1) * w / self.num_tile_columns -
-        i * w / self.num_tile_columns
+      let n = i.to_int64()
+      let p = self.num_tile_columns.to_int64()
+      cols[i] = (n + 1L) * w / p - n * w / p
     }
     for i in 0..<self.num_tile_rows {
-      rows[i] = (i + 1) * h / self.num_tile_rows - i * h / self.num_tile_rows
+      let n = i.to_int64()
+      let p = self.num_tile_rows.to_int64()
+      rows[i] = (n + 1L) * h / p - n * h / p
     }
   } else {
-    let mut sum = 0
+    let mut sum = 0L
     for i in 0..<self.column_width_minus1.length() {
-      cols[i] = self.column_width_minus1[i] + 1
-      sum = sum + cols[i]
+      cols[i] = self.column_width_minus1[i].to_int64() + 1L
+      sum = @safe.add(sum, cols[i])
     }
     if sum >= w {
       raise Invalid
     }
-    cols[self.num_tile_columns - 1] = w - sum
+    cols[self.num_tile_columns - 1] = @safe.sub(w, sum)
 
-    sum = 0
+    sum = 0L
     for i in 0..<self.row_height_minus1.length() {
-      rows[i] = self.row_height_minus1[i] + 1
-      sum = sum + rows[i]
+      rows[i] = self.row_height_minus1[i].to_int64() + 1L
+      sum = @safe.add(sum, rows[i])
     }
     if sum >= h {
       raise Invalid
     }
-    rows[self.num_tile_rows - 1] = h - sum
+    rows[self.num_tile_rows - 1] = @safe.sub(h, sum)
   }
 
   self.col_widths_in_ctbs = cols

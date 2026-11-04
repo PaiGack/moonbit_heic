@@ -16,7 +16,7 @@ You can browse and install extra skills here:
   metadata.
 
 - The module is `nrzhangsan/heic`. Packages, one per milestone:
-  `safe/` (32-bit overflow guard), `heif/` (ISOBMFF container),
+  `safe/` (64-bit arithmetic helpers), `heif/` (ISOBMFF container),
   `hevc/` (NAL + parameter sets), `hevc/bitreader/`, `hevc/headers/`,
   `hevc/cabac/`, `hevc/decode/`, `color/`, `io/png/`, `io/jpeg/`,
   `cmd/heic2png/`. `tools/parity/` holds the Node parity harness, and
@@ -31,11 +31,23 @@ You can browse and install extra skills here:
 - Try to keep deprecated blocks in file called `deprecated.mbt` in each
   directory.
 
-- **No bare 32-bit arithmetic on sizes or shifts.** MoonBit's `Int` is 32 bits;
-  the upstream Go this is ported from has a 64-bit `int`. Anything that could
-  leave the `Int` range — `width * height`, `1 << bits`, `(a + b - 1) / b`,
-  `uint32(x) >> n` — goes through `@safe` in `safe/`, which reports `Overflow`
-  instead of wrapping. Add a counterexample test next to every new guard.
+- **Sizes and shifts are `Int64`, always.** MoonBit's `Int` is 32 bits; the
+  upstream Go this is ported from has a 64-bit `int`. Any quantity that can
+  outgrow 2^31 — picture dimensions, plane and buffer sizes, CTB counts,
+  `1 << bits` masks, `(a + b - 1) / b` — is declared `Int64` and computed
+  through `safe/`, which is 64-bit arithmetic with the degenerate cases (zero
+  divisor, negative count, a shift past 63) reported as `Overflow`.
+  `Int32` is for values that are structurally small: chroma format ids, bit
+  depths, log2 sizes, NAL header fields, loop counters. Do not narrow a size
+  back to `Int32` "temporarily"; if a field is 32-bit today because of an old
+  guard, widen it.
+
+- `safe/narrow` is the one-way door from `Int64` to `Int` for the genuinely
+  32-bit fields; `safe/clamp` is the rare saturating variant. Neither belongs
+  anywhere near an allocation size.
+
+- Add a test next to every new size computation, and keep the counterexample
+  showing what the 32-bit version would have done.
 
 ## Tooling
 
