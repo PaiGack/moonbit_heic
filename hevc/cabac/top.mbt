@@ -1,18 +1,13 @@
-///|
-/// CABAC arithmetic decoding lands in M3.
-///
-/// This package holds the context model and the arithmetic decoder state. It
-/// stays a stub in M0; the only thing worth fixing now is that every width and
-/// shift it will need is `Int64`, because the CABAC renormalisation loop is
-/// where a wrapped multiplication would corrupt an entire CTU.
-pub suberror NotYetImplemented
+// CABAC, the arithmetic decoder of H.265 9.3. This package is the bottom of
+// the M3 reconstruction stack: it owns the context model and the arithmetic
+// state, and every layer above it (residual syntax, CTU, intra prediction)
+// reads bins through it.
 
 ///|
-/// Number of context models the decoder allocates, by syntax element class.
-///
-/// Upstream sizes this from SPS fields; `ctb_log2_size_y` is the only one that
-/// matters for the initial allocation. One entry per luma sample of a CTB is
-/// the granularity upstream indexes its per-coefficient contexts with.
+/// A helper from M0, kept for the size audit: one context per luma sample of
+/// a coding tree block is the granularity the per-coefficient contexts use.
+/// The real decoder allocates a fixed 179 contexts (9.3.2.2); this function is
+/// only about the Int64 arithmetic a CTB-sized allocation would need.
 pub fn context_table_size(
   ctb_log2_size_y : Int32,
 ) -> Int64 raise @safe.Overflow {

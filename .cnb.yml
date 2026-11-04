@@ -54,6 +54,13 @@
             - node --test tools/parity/
             - node tools/parity/dump.mjs tools/fixtures/empty_dump.json tools/fixtures/empty_dump.json
 
+        # The M3 golden bitstreams are generated from the committed tables;
+        # a hand edit that drifts them would make the decoder pass its own
+        # fixtures while disagreeing with the upstream.
+        - name: m3 golden fixtures are current
+          script:
+            - node tools/gen_m3_golden.mjs --check
+
   pull_request:
     - <<: *moonbit
       stages:
@@ -94,3 +101,10 @@
           script:
             - node --test tools/parity/
             - node tools/parity/dump.mjs tools/fixtures/empty_dump.json tools/fixtures/empty_dump.json
+
+        # The M3 golden bitstreams are generated from the committed tables;
+        # a hand edit that drifts them would make the decoder pass its own
+        # fixtures while disagreeing with the upstream.
+        - name: m3 golden fixtures are current
+          script:
+            - node tools/gen_m3_golden.mjs --check

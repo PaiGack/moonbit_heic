@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/dsp"
+
+// Values
+pub let dst4_input : Array[Int32]
+
+pub let dst4_want : Array[Int32]
+
+pub fn dst_matrix(Int32, Int32) -> Int32?
+
+pub let max_scan_log2 : Int32
+
+pub let n_scan_orders : Int32
+
+pub fn naive_1d(Array[Int32], Int32) -> Array[Int32]
+
+pub fn naive_1d_dst4(Array[Int32]) -> Array[Int32]
+
+pub let naive_cases : Array[NaiveCase]
+
+pub let scan_diag : Int32
+
+pub let scan_hor : Int32
+
+pub fn scan_len(Int32, Int32) -> Int32
+
+pub fn scan_pos(Int32, Int32, Int32) -> ScanPos?
+
+pub let scan_ver : Int32
+
+pub fn trans_matrix(Int32, Int32) -> Int32?
+
+// Errors
+
+// Types and methods
+pub(all) struct NaiveCase {
+  n : Int32
+  input : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) struct ScanPos {
+  x : Int32
+  y : Int32
+}
+
+// Type aliases
+
+// Traits
