@@ -1,5 +1,10 @@
 import {
+  "moonbitlang/core/encoding/utf8",
+}
+
+import {
   "nrzhangsan/heic/heif",
+  "moonbitlang/core/encoding/utf8",
 } for "test"
 
 pkgtype(kind: "library")
