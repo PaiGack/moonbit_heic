@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "username/workspace/hevc"
+package "nrzhangsan/heic/hevc"
 
 // Values
 pub fn default_scaling_list() -> ScalingList

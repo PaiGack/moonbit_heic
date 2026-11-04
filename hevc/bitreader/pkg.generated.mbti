@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/bitreader"
+
+// Values
+
+// Errors
+pub suberror EndOfStream
+
+pub suberror Overflow
+
+// Types and methods
+pub(all) struct BitReader {
+  data : Bytes
+  mut bit_pos : Int32
+}
+pub fn BitReader::bit_length(Self) -> Int32
+pub fn BitReader::new(Bytes) -> Self
+pub fn BitReader::peek_bit(Self) -> Bool raise EndOfStream
+pub fn BitReader::read_bit(Self) -> Bool raise EndOfStream
+pub fn BitReader::read_bits(Self, Int32) -> UInt32 raise
+pub fn BitReader::remaining(Self) -> Int32
+
+// Type aliases
+
+// Traits

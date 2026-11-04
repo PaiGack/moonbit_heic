@@ -1,3 +1,5 @@
 #!/bin/sh
-
-moon check
+# 提交前跑一遍和 CI 相同的检查，早发现便宜。
+set -e
+moon check --deny-warn
+moon test

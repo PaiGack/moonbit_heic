@@ -15,6 +15,13 @@ You can browse and install extra skills here:
 - In the toplevel directory, there is a `moon.mod` file listing module
   metadata.
 
+- The module is `nrzhangsan/heic`. Packages, one per milestone:
+  `safe/` (32-bit overflow guard), `heif/` (ISOBMFF container),
+  `hevc/` (NAL + parameter sets), `hevc/bitreader/`, `hevc/headers/`,
+  `hevc/cabac/`, `hevc/decode/`, `color/`, `io/png/`, `io/jpeg/`,
+  `cmd/heic2png/`. `tools/parity/` holds the Node parity harness, and
+  `tools/fixtures/` its inputs.
+
 ## Coding convention
 
 - MoonBit code is organized in block style, each block is separated by `///|`,
@@ -23,6 +30,12 @@ You can browse and install extra skills here:
 
 - Try to keep deprecated blocks in file called `deprecated.mbt` in each
   directory.
+
+- **No bare 32-bit arithmetic on sizes or shifts.** MoonBit's `Int` is 32 bits;
+  the upstream Go this is ported from has a 64-bit `int`. Anything that could
+  leave the `Int` range — `width * height`, `1 << bits`, `(a + b - 1) / b`,
+  `uint32(x) >> n` — goes through `@safe` in `safe/`, which reports `Overflow`
+  instead of wrapping. Add a counterexample test next to every new guard.
 
 ## Tooling
 
@@ -51,3 +64,13 @@ You can browse and install extra skills here:
   scientific computations), prefer assertion tests. You can use
   `moon coverage analyze > uncovered.log` to see which parts of your code are
   not covered by tests.
+
+- `node --test tools/parity/` runs the parity harness self-test. The harness
+  compares a dump against the upstream Go output; see `tools/parity/README.md`
+  for the dump format.
+
+## CI
+
+`.cnb.yml` runs `moon check --deny-warn`, `moon test`, `moon info` (fails if
+`.mbti` files drift), `moon fmt --check`, and the parity harness self-test on
+every push and pull request.

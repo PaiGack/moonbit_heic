@@ -1,0 +1,5 @@
+import {
+  "nrzhangsan/heic/color",
+} for "test"
+
+pkgtype(kind: "library")

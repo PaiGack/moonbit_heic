@@ -1,0 +1,96 @@
+# MoonBit 工程骨架的 CI。
+#
+# 每条分支的 push 和 PR 跑同一组检查：类型检查（警告即失败）、单测、
+# 公开接口无漂移、格式、以及对拍脚本自身的 node 自测。
+#
+# 环境镜像用官方的 debian 基础镜像：moon 的 linux-x86_64 产物是 glibc 的，
+# 而 curlimages/curl 之类是 alpine/musl，装不上。moon 装到 $HOME/.moon/bin，
+# 每个 stage 各 export 一次 PATH。
+
+.moonbit: &moonbit
+  docker:
+    image: debian:stable-slim
+
+"**":
+  push:
+    - <<: *moonbit
+      stages:
+        - name: install moonbit
+          script:
+            - apt-get update -qq
+            - apt-get install -y -qq --no-install-recommends curl ca-certificates git nodejs npm >/dev/null
+            - curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon version --all
+
+        - name: moon check --deny-warn
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon check --deny-warn
+
+        - name: moon test
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon test
+
+        # moon info 会重写 .mbti；重写后仍有 diff，说明公开接口变了却没提交。
+        - name: moon info
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon info
+            - |
+              if ! git diff --exit-code -- '*.mbti'; then
+                echo "公开接口有变动：请本地执行 moon info 并提交 .mbti"
+                exit 1
+              fi
+
+        - name: moon fmt --check
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon fmt --check
+
+        - name: parity harness self-test
+          script:
+            - node --test tools/parity/
+            - node tools/parity/dump.mjs tools/fixtures/empty_dump.json tools/fixtures/empty_dump.json
+
+  pull_request:
+    - <<: *moonbit
+      stages:
+        - name: install moonbit
+          script:
+            - apt-get update -qq
+            - apt-get install -y -qq --no-install-recommends curl ca-certificates git nodejs npm >/dev/null
+            - curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon version --all
+
+        - name: moon check --deny-warn
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon check --deny-warn
+
+        - name: moon test
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon test
+
+        - name: moon info
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon info
+            - |
+              if ! git diff --exit-code -- '*.mbti'; then
+                echo "公开接口有变动：请本地执行 moon info 并提交 .mbti"
+                exit 1
+              fi
+
+        - name: moon fmt --check
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - moon fmt --check
+
+        - name: parity harness self-test
+          script:
+            - node --test tools/parity/
+            - node tools/parity/dump.mjs tools/fixtures/empty_dump.json tools/fixtures/empty_dump.json

@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/color"
+
+// Values
+pub let matrix_shift : Int32
+
+// Errors
+pub suberror NotYetImplemented
+
+// Types and methods
+pub(all) struct ColorMatrix {
+  kr : Int32
+  kb : Int32
+  shift : Int32
+}
+pub fn ColorMatrix::from_matrix_coefficients(Int32) -> Self raise NotYetImplemented
+
+// Type aliases
+
+// Traits

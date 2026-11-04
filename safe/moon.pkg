@@ -1,0 +1,5 @@
+import {
+  "moonbitlang/core/coverage",
+} for "test"
+
+pkgtype(kind: "library")

@@ -1,0 +1,9 @@
+import {
+  "nrzhangsan/heic/safe",
+}
+
+import {
+  "nrzhangsan/heic/hevc/cabac",
+} for "test"
+
+pkgtype(kind: "library")

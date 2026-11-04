@@ -3,7 +3,7 @@ import {
 }
 
 import {
-  "username/workspace/hevc",
+  "nrzhangsan/heic/hevc",
 } for "test"
 
 pkgtype(kind: "library")

@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/decode"
+
+import {
+  "nrzhangsan/heic/safe",
+}
+
+// Values
+
+// Errors
+pub suberror NotYetImplemented
+
+// Types and methods
+pub(all) struct FrameBuffer {
+  width : Int32
+  height : Int32
+  sub_width_c : Int32
+  sub_height_c : Int32
+  luma_size : Int32
+  chroma_size : Int32
+}
+pub fn FrameBuffer::new(Int32, Int32, Int32, Int32) -> Self raise @safe.Overflow
+pub fn FrameBuffer::total_size(Self) -> Int32 raise @safe.Overflow
+
+// Type aliases
+
+// Traits

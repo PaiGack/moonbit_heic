@@ -4,13 +4,13 @@
 // To add a dependency, run this command in your terminal:
 //   moon add moonbitlang/x
 
-name = "username/workspace"
+name = "nrzhangsan/heic"
 
 version = "0.1.0"
 
 readme = "README.mbt.md"
 
-repository = ""
+repository = "https://cnb.cool/nrzhangsan/monbit_tmp"
 
 license = "Apache-2.0"
 

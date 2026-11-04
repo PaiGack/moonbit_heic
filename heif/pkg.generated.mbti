@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/heif"
+
+// Values
+pub fn read_full_box_header(UInt32) -> FullBoxHeader
+
+// Errors
+pub suberror Invalid
+
+pub suberror Unsupported
+
+// Types and methods
+pub(all) struct FullBoxHeader {
+  version : Int32
+  flags : Int32
+}
+
+// Type aliases
+pub type BoxType = String
+
+// Traits
