@@ -1,0 +1,5 @@
+import {
+  "nrzhangsan/heic/hevc/bitreader",
+} for "test"
+
+pkgtype(kind: "library")

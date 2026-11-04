@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/core/async",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "nrzhangsan/heic/io/png",
+  "moonbitlang/core/async/fs",
+  "moonbitlang/core/async/stdio",
+}
+
+pkgtype(kind: "executable")

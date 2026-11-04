@@ -34,13 +34,13 @@ pub(all) struct SPS {
   mut max_latency_increase : Int32
   mut min_cb_log2_size_y : Int32
   mut ctb_log2_size_y : Int32
-  mut ctb_size_y : Int32
+  mut ctb_size_y : Int64
   mut min_tb_log2_size_y : Int32
   mut max_tb_log2_size_y : Int32
   mut max_tr_hier_inter : Int32
   mut max_tr_hier_intra : Int32
-  mut pic_width_in_ctbs : Int32
-  mut pic_height_in_ctbs : Int32
+  mut pic_width_in_ctbs : Int64
+  mut pic_height_in_ctbs : Int64
   mut scaling_list_enabled : Bool
   mut scaling_list : ScalingList
   mut amp_enabled : Bool
@@ -125,13 +125,13 @@ pub fn parse_sps(nal : Bytes) -> SPS raise Error {
     max_latency_increase: 0,
     min_cb_log2_size_y: 0,
     ctb_log2_size_y: 0,
-    ctb_size_y: 0,
+    ctb_size_y: 0L,
     min_tb_log2_size_y: 0,
     max_tb_log2_size_y: 0,
     max_tr_hier_inter: 0,
     max_tr_hier_intra: 0,
-    pic_width_in_ctbs: 0,
-    pic_height_in_ctbs: 0,
+    pic_width_in_ctbs: 0L,
+    pic_height_in_ctbs: 0L,
     scaling_list_enabled: false,
     scaling_list: default_scaling_list(),
     amp_enabled: false,
@@ -254,15 +254,21 @@ pub fn parse_sps(nal : Bytes) -> SPS raise Error {
 
   // 7.4.3.2: both dimensions are an integer multiple of MinCbSizeY. Without
   // it a coding unit at the edge extends past the picture.
-  let mask = (1 << s.min_cb_log2_size_y) - 1
-  if (s.pic_width_in_luma_samples & mask) != 0 ||
-    (s.pic_height_in_luma_samples & mask) != 0 {
+  let mask = @safe.bit_mask(s.min_cb_log2_size_y)
+  if (s.pic_width_in_luma_samples.to_int64() & mask) != 0L ||
+    (s.pic_height_in_luma_samples.to_int64() & mask) != 0L {
     raise Invalid
   }
 
-  s.ctb_size_y = 1 << s.ctb_log2_size_y
-  s.pic_width_in_ctbs = ceil_div(s.pic_width_in_luma_samples, s.ctb_size_y)
-  s.pic_height_in_ctbs = ceil_div(s.pic_height_in_luma_samples, s.ctb_size_y)
+  s.ctb_size_y = (1 << s.ctb_log2_size_y).to_int64()
+  s.pic_width_in_ctbs = @safe.div_ceil(
+    s.pic_width_in_luma_samples.to_int64(),
+    s.ctb_size_y,
+  )
+  s.pic_height_in_ctbs = @safe.div_ceil(
+    s.pic_height_in_luma_samples.to_int64(),
+    s.ctb_size_y,
+  )
 
   let log2_min_tb_size_minus2 = c.ue().reinterpret_as_int()
   let log2_diff_max_min_tb_size = c.ue().reinterpret_as_int()
@@ -574,9 +580,4 @@ fn parse_short_term_rps(
   }
 
   rps
-}
-
-///|
-fn ceil_div(a : Int32, b : Int32) -> Int32 {
-  (a + b - 1) / b
 }

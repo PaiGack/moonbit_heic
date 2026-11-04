@@ -1,0 +1,5 @@
+import {
+  "nrzhangsan/heic/io/jpeg",
+} for "test"
+
+pkgtype(kind: "library")

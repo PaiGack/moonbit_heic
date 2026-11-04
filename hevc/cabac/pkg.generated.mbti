@@ -1,0 +1,18 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/cabac"
+
+import {
+  "nrzhangsan/heic/safe",
+}
+
+// Values
+pub fn context_table_size(Int32) -> Int64 raise @safe.Overflow
+
+// Errors
+pub suberror NotYetImplemented
+
+// Types and methods
+
+// Type aliases
+
+// Traits

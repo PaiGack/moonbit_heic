@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/safe"
+
+// Values
+pub fn add(Int64, Int64) -> Int64
+
+pub fn bit_mask(Int32) -> Int64 raise Overflow
+
+pub fn clamp(Int64) -> Int32
+
+pub fn div_ceil(Int64, Int64) -> Int64 raise Overflow
+
+pub let int64_max : Int64
+
+pub let int64_min : Int64
+
+pub let int_max : Int64
+
+pub let int_min : Int64
+
+pub fn mul(Int64, Int64) -> Int64
+
+pub fn mul_div(Int64, Int64, Int64) -> Int64 raise Overflow
+
+pub fn narrow(Int64) -> Int32 raise Overflow
+
+pub fn shl(Int64, Int32) -> Int64 raise Overflow
+
+pub fn shr(Int64, Int32) -> Int64 raise Overflow
+
+pub fn sub(Int64, Int64) -> Int64
+
+// Errors
+pub(all) suberror Overflow
+
+// Types and methods
+
+// Type aliases
+
+// Traits
