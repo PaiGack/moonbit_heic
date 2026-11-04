@@ -4,21 +4,21 @@
 ///
 /// Each of these would be an out-of-bounds index in a parser that trusted the
 /// sizes the file declares.
-async test "malformed and truncated inputs return an error" {
+test "malformed and truncated inputs return an error" {
   let names = [
     "bad_size.heic", "empty.heic", "no_ftyp.heic", "only_ftyp.heic", "size_lt_head.heic",
     "trunc_header.heic", "trunc_meta.heic",
   ]
   for name in names {
-    let data = @fs.read_binary("heif/testdata/malformed/" + name)
+    let data = fixtures("malformed/" + name)
     let result = @heif.parse(data)
     assert_true(result is Err(_))
   }
 }
 
 ///|
-async test "a truncated tail stops the walk instead of reading past it" {
-  let whole = @fs.read_binary("heif/testdata/minimal.heic")
+test "a truncated tail stops the walk instead of reading past it" {
+  let whole = fixtures("minimal.heic")
   // Cut the file at every length in turn: the parser has to stay alive for
   // all of them, whatever it decides about the ones that are still viable.
   for length in 0..<whole.length() {
@@ -30,8 +30,8 @@ async test "a truncated tail stops the walk instead of reading past it" {
 }
 
 ///|
-async test "a file that parses but whose primary item does not is an error, not a trap" {
-  let data = @fs.read_binary("heif/testdata/malformed/trunc_mdat.heic")
+test "a file that parses but whose primary item does not is an error, not a trap" {
+  let data = fixtures("malformed/trunc_mdat.heic")
   let f = @heif.parse(data).unwrap()
   // The item tree is intact; only the media data is missing.
   assert_eq(f.meta.primary, 1L)
@@ -52,8 +52,8 @@ fn extent_offset_field(data : Bytes, offset : Int64) -> Int32 {
 }
 
 ///|
-async test "an item pointing outside the file is refused" {
-  let data = @fs.read_binary("heif/testdata/minimal.heic")
+test "an item pointing outside the file is refused" {
+  let data = fixtures("minimal.heic")
   let f = @heif.parse(data).unwrap()
   let at = extent_offset_field(data, f.primary_image_offset())
   assert_true(at > 0)
@@ -73,8 +73,8 @@ async test "an item pointing outside the file is refused" {
 /// The trap the issue calls out by name: a stray `0x0000` after the `dref`
 /// pair reads as `extent_count == 0`, which parses cleanly and fails much
 /// later as "the item has no bytes".
-async test "an iloc with a zero extent count parses but yields no payload" {
-  let data = @fs.read_binary("heif/testdata/minimal.heic")
+test "an iloc with a zero extent count parses but yields no payload" {
+  let data = fixtures("minimal.heic")
   let f = @heif.parse(data).unwrap()
   let at = extent_offset_field(data, f.primary_image_offset())
   assert_true(at > 0)

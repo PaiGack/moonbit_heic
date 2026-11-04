@@ -5,7 +5,6 @@ import {
 import {
   "nrzhangsan/heic/heif",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/async/fs",
 } for "test"
 
 pkgtype(kind: "library")

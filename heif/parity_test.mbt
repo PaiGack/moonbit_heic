@@ -234,17 +234,15 @@ fn hex(data : Bytes) -> String {
 /// The fixture is the upstream `encoding/json` output with sorted keys and no
 /// spaces; `canonical_dump` prints the same shape, so this is a string compare
 /// and a failure points at the first differing byte.
-async test "fixture dumps match the upstream Go output" {
+test "fixture dumps match the upstream Go output" {
   let names = [
     "alpha.heic", "basic.heic", "chroma422.heic", "chroma444.heic", "deep10.heic",
     "enc422.heic", "enc444.heic", "grid.heic", "lossless.heic", "main10.heic", "minimal.heic",
     "thumb.heic",
   ]
   for name in names {
-    let data = @fs.read_binary("heif/testdata/" + name)
-    let expected = @fs.read_binary(
-      "tools/fixtures/heic/expected_" + name + ".json",
-    )
+    let data = fixtures(name)
+    let expected = tools_fixture(name)
     let want = @utf8.decode(expected).trim().to_owned()
     let got = canonical_dump(data)
     assert_eq(got, want)
