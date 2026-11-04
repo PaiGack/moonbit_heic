@@ -50,24 +50,33 @@ fn list(xs : Array[Int32]) -> String {
 }
 
 ///|
-fn parse_10bit_128x128() -> Unit raise Error {
-  // The first VPS, SPS and PPS of 10bit_128x128.h265.
+fn parse_main10_is_outside_the_profile() -> Unit raise Error {
+  // The first VPS, SPS and PPS of 10bit_128x128.h265. Everything up to the
+  // profile check parses; the picture itself is Main 10, which this port does
+  // not decode, so the SPS is refused by name rather than silently accepted.
   let vps = b"\x40\x01\x0c\x01\xff\xff\x02\x20\x00\x00\x03\x00\x90\x00\x00\x03\x00\x00\x03\x00\x1e\xba\x02\x40"
   let sps = b"\x42\x01\x01\x02\x20\x00\x00\x03\x00\x90\x00\x00\x03\x00\x00\x03\x00\x1e\xa0\x10\x20\x20\x4d\x96\xe9\x6f\x0b\x80\x40\x00\x00\xfa\x00\x00\x1d\x4c\x02"
   let pps = b"\x44\x01\xc0\x71\x81\xa4\x80"
 
+  // A parameter set has no profile of its own, so the VPS still parses and
+  // reports what the stream declares.
   let v = @hevc.parse_vps(vps)
   assert_eq(
     vps_summary(v),
     "vps id=0 maxLayers=0 maxSub=0 nesting=true ptl={profileSpace:0 tierFlag:false profileIDC:2 levelIDC:30 compatFlags:536870912} buffering=[2 0 0 0 0 0 0] reorder=[0 0 0 0 0 0 0] latency=[1 0 0 0 0 0 0]",
   )
 
-  let s = @hevc.parse_sps(sps)
-  assert_eq(
-    sps_summary(s),
-    "sps vps=0 maxSub=0 nesting=true ptl={profileSpace:0 tierFlag:false profileIDC:2 levelIDC:30 compatFlags:536870912} id=0 chroma=1 sep=false w=128 h=128 crop=0,0,0,0 bd=10,10 log2poc=8 mincb=4 ctb=4 mintb=2 maxtb=4 amp=false sao=false pcm=false strps=0 lt=false tmvp=true sis=true cp=2 tc=2 mc=2 full=false tmS=false tiles=2",
-  )
+  let refused = try {
+    ignore(@hevc.parse_sps(sps))
+    None
+  } catch {
+    @hevc.UnsupportedProfile(profile_idc~, chroma_format_idc~, bit_depth_luma~) =>
+      Some((profile_idc, chroma_format_idc, bit_depth_luma))
+    _ => None
+  }
+  assert_eq(refused, Some((2, 1, 10)))
 
+  // The PPS is Main-independent and still parses.
   let p = @hevc.parse_pps(pps)
   assert_eq(
     pps_summary(p),
@@ -76,8 +85,8 @@ fn parse_10bit_128x128() -> Unit raise Error {
 }
 
 ///|
-test "parse_10bit_128x128" {
-  parse_10bit_128x128()
+test "parse_main10_is_outside_the_profile" {
+  parse_main10_is_outside_the_profile()
 }
 
 ///|

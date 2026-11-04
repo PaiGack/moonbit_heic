@@ -374,6 +374,10 @@ pub fn parse_sps(nal : Bytes) -> SPS raise Error {
   }
 
   check_trailing(c, unparsed)
+  // The one profile this port decodes is checked here rather than at decode
+  // time: a picture outside it has no path through the decoder, and finding
+  // that out after allocating a frame buffer helps nobody.
+  check_main_profile(s)
   s
 }
 

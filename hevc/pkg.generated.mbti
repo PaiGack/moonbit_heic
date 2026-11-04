@@ -2,6 +2,10 @@
 package "nrzhangsan/heic/hevc"
 
 // Values
+pub fn bits_at(Bytes, Int32, Int32) -> UInt32
+
+pub fn check_main_profile(SPS) -> Unit raise
+
 pub fn default_scaling_list() -> ScalingList
 
 pub fn marshal_annex_b(Array[NALUnit]) -> Bytes
@@ -10,15 +14,27 @@ pub fn marshal_hvcc(Array[NALUnit], Int32) -> Bytes?
 
 pub fn marshal_nal(NALUnit) -> Bytes
 
+pub fn more_rbsp_data(Bytes, Int32) -> Bool
+
+pub fn parse_access_unit(Bytes, Array[Bytes], Int32, Bool) -> AccessUnit raise
+
 pub fn parse_nal(Bytes) -> NALUnit?
 
 pub fn parse_pps(Bytes) -> PPS raise
+
+pub fn parse_slice_header(Bytes, NALType, SPS, PPS) -> SliceHeader raise
 
 pub fn parse_sps(Bytes) -> SPS raise
 
 pub fn parse_vps(Bytes) -> VPS raise
 
+pub fn pos_after(Bytes, Int32) -> Int32
+
 pub fn profile_tier_level_bytes(Bytes) -> Bytes?
+
+pub fn read_past_end(Bytes) -> Bool
+
+pub fn se_seq(Bytes, Int32) -> Array[Int32]
 
 pub fn split_annex_b(Bytes) -> Array[NALUnit]
 
@@ -26,12 +42,45 @@ pub fn split_hvcc(Bytes, Int32) -> Array[NALUnit]
 
 pub fn sps_format(Bytes) -> (Int32, Int32, Int32)?
 
+pub fn ue_overflows(Bytes) -> Bool
+
+pub fn ue_seq(Bytes, Int32) -> Array[UInt32]
+
 // Errors
 pub suberror Invalid
 
 pub suberror Unsupported
 
+pub suberror UnsupportedProfile {
+  UnsupportedProfile(profile_idc~ : Int32, chroma_format_idc~ : Int32, bit_depth_luma~ : Int32)
+}
+
 // Types and methods
+pub(all) struct AccessUnit {
+  vps : VPS?
+  sps : SPS
+  pps : PPS
+  slices : Array[SliceSegment]
+  other : Array[NALUnit]
+}
+
+pub(all) struct HevcParams {
+  vps : Bytes?
+  sps : Bytes
+  pps : Bytes
+  length_size : Int32
+  rest : Bytes
+}
+pub fn HevcParams::split(Bytes, Int32, Bool) -> Self raise
+
+pub(all) struct LongTermRPS {
+  mut num_sps : Int32
+  mut poc_lsb_lt : Array[Int32]
+  mut used_by_curr_pic_lt : Array[Bool]
+  mut delta_poc_msb_present : Array[Bool]
+  mut delta_poc_msb_cycle : Array[Int32]
+}
+
 pub(all) enum NALType {
   TrailN
   TrailR
@@ -130,12 +179,28 @@ pub(all) struct PPS {
 }
 pub fn PPS::resolve_tile_geometry(Self, SPS) -> Unit raise
 
+pub(all) struct PredWeightTable {
+  mut luma_log2_denom : Int32
+  mut chroma_log2_denom : Int32
+  mut luma_weight : Array[Array[Int32]]
+  mut luma_offset : Array[Array[Int32]]
+  mut chroma_weight : Array[Array[Array[Int32]]]
+  mut chroma_offset : Array[Array[Array[Int32]]]
+}
+
 pub(all) struct ProfileTierLevel {
   mut profile_space : Int32
   mut tier_flag : Bool
   mut profile_idc : Int32
   mut level_idc : Int32
   mut compat_flags : UInt32
+}
+
+pub(all) struct RefPicListModification {
+  mut flag_l0 : Bool
+  mut list_entry_l0 : Array[Int32]
+  mut flag_l1 : Bool
+  mut list_entry_l1 : Array[Int32]
 }
 
 pub(all) struct SPS {
@@ -214,6 +279,59 @@ pub(all) struct ShortTermRPS {
   used_s1 : Array[Bool]
 }
 pub fn ShortTermRPS::num_delta_pocs(Self) -> Int32
+
+pub(all) struct SliceHeader {
+  mut nal_type : NALType
+  mut first_slice_segment_in_pic : Bool
+  mut no_output_of_prior_pics : Bool
+  mut pps_id : Int32
+  mut dependent_slice_segment : Bool
+  mut slice_segment_address : Int64
+  mut slice_type : SliceType
+  mut pic_output_flag : Bool
+  mut colour_plane_id : Int32
+  mut pic_order_cnt_lsb : Int32
+  mut st_rps_from_sps : Bool
+  mut st_rps_idx : Int32
+  mut st_rps : ShortTermRPS
+  mut lt_rps : LongTermRPS
+  mut temporal_mvp : Bool
+  mut num_poc_total_curr : Int32
+  mut sao_luma : Bool
+  mut sao_chroma : Bool
+  mut num_ref_idx_l0_active : Int32
+  mut num_ref_idx_l1_active : Int32
+  mut list_modification : RefPicListModification
+  mut mvd_l1_zero : Bool
+  mut cabac_init : Bool
+  mut collocated_from_l0 : Bool
+  mut collocated_ref_idx : Int32
+  mut max_num_merge_cand : Int32
+  mut weights : PredWeightTable
+  mut qp_delta : Int32
+  mut qp_y : Int32
+  mut cb_qp_offset : Int32
+  mut cr_qp_offset : Int32
+  mut cu_chroma_qp_offset : Bool
+  mut deblocking_disabled : Bool
+  mut beta_offset_div2 : Int32
+  mut tc_offset_div2 : Int32
+  mut loop_filter_across : Bool
+  mut entry_point_offsets : Array[Int32]
+  mut data_offset : Int64
+}
+
+pub(all) struct SliceSegment {
+  header : SliceHeader
+  nal : NALUnit
+}
+
+pub(all) enum SliceType {
+  B
+  P
+  I
+}
+pub fn SliceType::code(Self) -> Int32
 
 pub(all) struct VPS {
   mut id : Int32

@@ -3,8 +3,9 @@
 MoonBit 移植自 [gen2brain/h265](https://github.com/gen2brain/h265)，
 一个纯 Go 的 HEVC 视频 / HEIC 图像编解码器。
 
-当前进度：M0（工程骨架 + `safe/`）与 M1（HEIF / ISOBMFF 容器）已完成，
-`hevc` 包的 NAL 与参数集（VPS / SPS / PPS）解析已就位。所有字段与上游逐项对齐。
+当前进度：M0（工程骨架 + `safe/`）、M1（HEIF / ISOBMFF 容器）与
+M2（HEVC 头解析：NAL / AnnexB / hvcC 分帧、位读取、VPS / SPS / PPS、
+slice segment header）已完成。所有字段与上游逐项对齐。
 
 M1 只搬字节，不解码：给它一个 iPhone `.heic`，它告诉你「主图是哪个 item、
 载荷在文件哪个偏移、多长、编码参数是什么」。
@@ -24,7 +25,23 @@ moon run cmd/heicinfo -- photo.heic
 # photo.heic: 4032x3024 | hvc1 @ HEVC Main Still Picture 8bit 4:2:0 | BT.709 | payload 2.1MB
 ```
 
-下一步：片层头（slice header）、CTU/CABAC、帧内预测与残差重建。
+一个 item 走到片层头为止长这样——M3 从这里接着解 CTU：
+
+```moonbit
+let au = @hevc.parse_access_unit(img.payload, img.hvc_c.unwrap().param_sets,
+                                  img.hvc_c.unwrap().length_size, false)
+println("\{au.sps.cropped_width()}x\{au.sps.cropped_height()} @ \{au.sps.bit_depth_luma}bit, \{au.slices.length()} slice")
+// 每个 slice 的头已经解好，data_offset 指向它自己的 slice data
+for s in au.slices {
+  println("\{s.header.slice_type} poc=\{s.header.pic_order_cnt_lsb} qp=\{s.header.qp_y}")
+}
+```
+
+`parse_sps` 只放行 Main（profile_idc 1，8bit 4:2:0；Main Still Picture
+`profile_idc=3` 也放行）：其余一概 `UnsupportedProfile(profile_idc~,
+chroma_format_idc~, bit_depth_luma~)`，把拒绝的原因说清楚，而不是静默糊过去。
+
+下一步：CABAC、CTU/TU/PU 重建、帧内预测与残差。
 
 ## 工程结构
 
@@ -33,9 +50,9 @@ moon run cmd/heicinfo -- photo.heic
 ```
 safe/              Int 溢出护栏，所有移位/乘法都从这里过
 heif/              HEIF / ISOBMFF 容器（M1），已实现
-hevc/              NAL + 参数集，已实现
-hevc/bitreader/    MSB-first 位读取（M2）
-hevc/headers/      片层头（M2）
+hevc/              NAL + 参数集 + 片层头 + AccessUnit，已实现
+hevc/bitreader/    MSB-first 位读取（M2 已实现，公开读取器）
+hevc/headers/      片层头的包位置（解析实现放在 hevc/slice.mbt）
 hevc/cabac/        CABAC（M3）
 hevc/decode/       CTU/TU/PU 重建（M3）
 color/             YUV→RGB、色域（M4）
