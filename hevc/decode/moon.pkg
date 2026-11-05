@@ -1,10 +1,10 @@
 import {
   "nrzhangsan/heic/safe",
+  "nrzhangsan/heic/hevc",
 }
 
 import {
   "nrzhangsan/heic/hevc/decode",
-  "nrzhangsan/heic/safe",
 } for "test"
 
 pkgtype(kind: "library")

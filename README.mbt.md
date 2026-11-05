@@ -5,7 +5,9 @@ MoonBit 移植自 [gen2brain/h265](https://github.com/gen2brain/h265)，
 
 当前进度：M0（工程骨架 + `safe/`）、M1（HEIF / ISOBMFF 容器）与
 M2（HEVC 头解析：NAL / AnnexB / hvcC 分帧、位读取、VPS / SPS / PPS、
-slice segment header）已完成。所有字段与上游逐项对齐。
+slice segment header）已完成。所有字段与上游逐项对齐。M3 已从底层往上
+落地：CABAC 算术解码器（179 上下文、Table 9-4/9-46/9-47 逐条对齐）、
+系数扫描表与逆变换基矩阵、`Yuv420p8` 与 `decode_i_frame` 的接口契约。
 
 M1 只搬字节，不解码：给它一个 iPhone `.heic`，它告诉你「主图是哪个 item、
 载荷在文件哪个偏移、多长、编码参数是什么」。
@@ -41,7 +43,13 @@ for s in au.slices {
 `profile_idc=3` 也放行）：其余一概 `UnsupportedProfile(profile_idc~,
 chroma_format_idc~, bit_depth_luma~)`，把拒绝的原因说清楚，而不是静默糊过去。
 
-下一步：CABAC、CTU/TU/PU 重建、帧内预测与残差。
+M3 的这几层都用上游 Go 的单测数据和独立生成的 golden 码流逐 bin / 逐项
+对拍：CABAC 的 8400 个 bin 与一个独立算术编码器写的码流逐位一致，
+扫描表、变换矩阵与 1D 逆变换都对齐上游断言。
+
+下一步：把 CTU/TU/PU 重建、帧内预测、残差语法、去块滤波与 SAO 接进
+`decode_i_frame`。在这之前它对合法的 I 帧返回 `DecodeError::NotImplemented`，
+不伪造像素——接口形状、profile 校验、畸形码流拒绝和 YUV 平面分配已经就位。
 
 ## 工程结构
 
@@ -53,8 +61,9 @@ heif/              HEIF / ISOBMFF 容器（M1），已实现
 hevc/              NAL + 参数集 + 片层头 + AccessUnit，已实现
 hevc/bitreader/    MSB-first 位读取（M2 已实现，公开读取器）
 hevc/headers/      片层头的包位置（解析实现放在 hevc/slice.mbt）
-hevc/cabac/        CABAC（M3）
-hevc/decode/       CTU/TU/PU 重建（M3）
+hevc/cabac/        CABAC 算术解码器（M3 已实现，逐 bin 对拍）
+hevc/dsp/          扫描表与逆变换基矩阵（M3 已实现）
+hevc/decode/       Yuv420p8 / decode_i_frame 契约（M3），CTU 重建待接
 color/             YUV→RGB、色域（M4）
 io/png/ io/jpeg/   输出编码（M4）
 cmd/heicinfo/      CLI：容器侦察（M1）

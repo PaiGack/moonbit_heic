@@ -1,17 +1,14 @@
-///|
-/// CTU / TU / PU reconstruction lands in M3.
-///
-/// This is where the picture buffer lives and where the hardest size audit
-/// will be: every stride, offset and plane size in the reconstruction path is
-/// a multiplication, so all of them are carried as `Int64`.
-pub suberror NotYetImplemented
+// Picture buffer sizing for M3. FrameBuffer carries every plane size as an
+// Int64: the upstream Go sized these with a 64-bit int, and a 32-bit wrap
+// would hand the reconstruction a stride that points outside the allocation.
 
 ///|
 /// A planar 8-bit picture buffer.
 ///
-/// Only the allocation arithmetic is real in M0 — `width * height` plus the
-/// two chroma planes at `sub_width_c` / `sub_height_c` subsampling — because
-/// that is exactly the expression upstream wrote assuming a 64-bit `int`.
+/// The allocation arithmetic is real: `width * height` plus the two chroma
+/// planes at `sub_width_c` / `sub_height_c` subsampling — exactly the
+/// expression upstream wrote assuming a 64-bit `int`. `alloc_frame` in
+/// frame.mbt narrows these sizes once, at the allocation boundary.
 pub(all) struct FrameBuffer {
   width : Int64
   height : Int64

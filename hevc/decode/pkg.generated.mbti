@@ -2,15 +2,26 @@
 package "nrzhangsan/heic/hevc/decode"
 
 import {
+  "nrzhangsan/heic/hevc",
   "nrzhangsan/heic/safe",
 }
 
 // Values
+pub fn alloc_frame(@hevc.SPS) -> Result[Yuv420p8, DecodeError]
+
+pub fn decode_i_frame(@hevc.SPS, @hevc.PPS, @hevc.AccessUnit) -> Result[Yuv420p8, DecodeError]
 
 // Errors
-pub suberror NotYetImplemented
 
 // Types and methods
+pub(all) enum DecodeError {
+  InvalidStream
+  UnsupportedProfile
+  NotISlice
+  TooLarge
+  NotImplemented
+}
+
 pub(all) struct FrameBuffer {
   width : Int64
   height : Int64
@@ -21,6 +32,15 @@ pub(all) struct FrameBuffer {
 }
 pub fn FrameBuffer::new(Int64, Int64, Int32, Int32) -> Self raise @safe.Overflow
 pub fn FrameBuffer::total_size(Self) -> Int64
+
+pub(all) struct Yuv420p8 {
+  y : FixedArray[Byte]
+  u : FixedArray[Byte]
+  v : FixedArray[Byte]
+  width : Int64
+  height : Int64
+}
+pub fn Yuv420p8::total_samples(Self) -> Int64
 
 // Type aliases
 

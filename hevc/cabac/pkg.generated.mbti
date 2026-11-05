@@ -8,10 +8,41 @@ import {
 // Values
 pub fn context_table_size(Int32) -> Int64 raise @safe.Overflow
 
+pub let golden_cases : Array[GoldenCase]
+
+pub let n_contexts : Int32
+
 // Errors
-pub suberror NotYetImplemented
+pub suberror BadBypassCount
+
+pub suberror BadContext
+
+pub suberror InvalidInit
 
 // Types and methods
+pub(all) struct Decoder {
+  mut low : UInt32
+  mut rng : UInt32
+  data : Bytes
+  mut pos : Int32
+  mut state : Array[Int32]
+}
+pub fn Decoder::decode_bin(Self, Int32) -> Int32 raise BadContext
+pub fn Decoder::decode_bypass(Self) -> Int32
+pub fn Decoder::decode_bypass_bits(Self, Int32) -> UInt32 raise BadBypassCount
+pub fn Decoder::decode_terminate(Self) -> Int32
+pub fn Decoder::init_contexts(Self, Int32, Int32, Bool) -> Unit
+pub fn Decoder::new(Bytes, Int32) -> Self raise InvalidInit
+pub fn Decoder::pcm_offset(Self) -> Int32
+pub fn Decoder::states(Self) -> Array[Int32]
+
+pub(all) struct GoldenCase {
+  qp : Int32
+  slice_type_code : Int32
+  seed : Int32
+  bytes : Bytes
+  ops : Array[Int32]
+}
 
 // Type aliases
 
