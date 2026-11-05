@@ -3,12 +3,16 @@ package "nrzhangsan/heic/hevc/decode"
 
 import {
   "nrzhangsan/heic/hevc",
+  "nrzhangsan/heic/hevc/ctu",
   "nrzhangsan/heic/hevc/geometry",
+  "nrzhangsan/heic/hevc/reconstruct",
   "nrzhangsan/heic/safe",
 }
 
 // Values
 pub fn alloc_frame(@hevc.SPS) -> Result[Yuv420p8, DecodeError]
+
+pub fn ctu_frame_input(@hevc.SPS, @hevc.PPS, @hevc.SliceHeader, Bytes) -> Result[CtuFrameInput, UnsupportedCtuTool]
 
 pub fn decode_i_frame(@hevc.SPS, @hevc.PPS, @hevc.AccessUnit) -> Result[Yuv420p8, DecodeError]
 
@@ -23,6 +27,14 @@ pub fn syntax_params(@hevc.SPS, @hevc.PPS, @hevc.SliceHeader) -> SyntaxParams
 // Errors
 
 // Types and methods
+pub(all) struct CtuFrameInput {
+  params : @ctu.CtuParams
+  geom : @geometry.Geometry
+  config : @reconstruct.ReconConfig
+  qp_y : Int32
+  slice_data : Bytes
+}
+
 pub(all) enum DecodeError {
   InvalidStream
   UnsupportedProfile
@@ -84,6 +96,17 @@ pub(all) struct SyntaxParams {
   cbf_luma_root_ctx : Int32
   cbf_luma_nested_ctx : Int32
   qp_y_wrapped : Int32
+}
+
+pub(all) enum UnsupportedCtuTool {
+  Sao
+  Pcm
+  TransformSkip
+  ScalingList
+  TransquantBypass
+  Tiles
+  Wpp
+  CuChromaQpOffset
 }
 
 pub(all) struct Yuv420p8 {

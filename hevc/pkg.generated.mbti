@@ -22,11 +22,19 @@ pub fn parse_nal(Bytes) -> NALUnit?
 
 pub fn parse_pps(Bytes) -> PPS raise
 
+pub fn parse_pps_rbsp(Bytes) -> PPS raise
+
 pub fn parse_slice_header(Bytes, NALType, SPS, PPS) -> SliceHeader raise
+
+pub fn parse_slice_header_rbsp(Bytes, NALType, SPS, PPS) -> SliceHeader raise
 
 pub fn parse_sps(Bytes) -> SPS raise
 
+pub fn parse_sps_rbsp(Bytes) -> SPS raise
+
 pub fn parse_vps(Bytes) -> VPS raise
+
+pub fn parse_vps_rbsp(Bytes) -> VPS raise
 
 pub fn pos_after(Bytes, Int32) -> Int32
 

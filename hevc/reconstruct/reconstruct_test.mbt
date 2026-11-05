@@ -34,6 +34,7 @@ test "reconstruct_block reproduces upstream prediction-only planes" {
         qp_dequant,
         dec,
         false,
+        @reconstruct.ReconConfig::default(),
       ) {
       Ok(_) => ()
       Err(_) => fail("reconstruct_block (pred only) failed")
@@ -64,6 +65,7 @@ test "reconstruct_block reproduces upstream fully reconstructed planes" {
         qp_dequant,
         dec,
         true,
+        @reconstruct.ReconConfig::default(),
       ) {
       Ok(_) => ()
       Err(_) => fail("reconstruct_block (full) failed")
@@ -99,6 +101,7 @@ test "reconstruct_block rejects malformed blocks without trapping" {
       26,
       dec,
       false,
+      @reconstruct.ReconConfig::default(),
     )
     assert_true(r is Err(@reconstruct.InvalidBlock))
   }

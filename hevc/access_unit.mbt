@@ -136,11 +136,11 @@ pub fn parse_access_unit(
     HevcParams::split(payload, length_size, annex_b)
   }
 
-  let sps = parse_sps(params.sps)
-  let pps = parse_pps(params.pps)
+  let sps = parse_sps_rbsp(params.sps)
+  let pps = parse_pps_rbsp(params.pps)
   let vps = match params.vps {
     None => None
-    Some(b) => Some(parse_vps(b))
+    Some(b) => Some(parse_vps_rbsp(b))
   }
   // A picture parameter set names the sequence it belongs to; one pointing
   // somewhere else describes a different picture, and decoding it would use
@@ -162,7 +162,7 @@ pub fn parse_access_unit(
       Some(t) =>
         if t.is_vcl() {
           slices.push({
-            header: parse_slice_header(n.rbsp, t, sps, pps),
+            header: parse_slice_header_rbsp(n.rbsp, t, sps, pps),
             nal: n,
           })
         } else {

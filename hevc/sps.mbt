@@ -89,7 +89,15 @@ pub fn SPS::cropped_height(self : SPS) -> Int32 {
 ///|
 /// Parses a sequence parameter set from a NAL unit, header included.
 pub fn parse_sps(nal : Bytes) -> SPS raise Error {
-  let c = GetBits::new(nal_payload(nal))
+  parse_sps_rbsp(nal_payload(nal))
+}
+
+///|
+/// Parses a SPS from an already-unescaped RBSP (the shape
+/// `split_annex_b` / `split_hvcc` produce). `parse_access_unit` uses this so
+/// the payload is not unescaped a second time.
+pub fn parse_sps_rbsp(rbsp : Bytes) -> SPS raise Error {
+  let c = GetBits::new(rbsp)
 
   let s : SPS = {
     vps_id: 0,

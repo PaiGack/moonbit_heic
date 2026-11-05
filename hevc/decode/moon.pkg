@@ -5,6 +5,9 @@ import {
   "nrzhangsan/heic/hevc/loopfilter",
   "nrzhangsan/heic/hevc/syntax",
   "nrzhangsan/heic/hevc/geometry",
+  "nrzhangsan/heic/hevc/reconstruct",
+  "nrzhangsan/heic/hevc/cabac",
+  "nrzhangsan/heic/hevc/ctu",
 }
 
 import {
@@ -13,4 +16,5 @@ import {
   "nrzhangsan/heic/hevc/loopfilter",
   "nrzhangsan/heic/hevc/syntax",
   "nrzhangsan/heic/hevc/geometry",
+  "nrzhangsan/heic/hevc/ctu",
 } for "test"
