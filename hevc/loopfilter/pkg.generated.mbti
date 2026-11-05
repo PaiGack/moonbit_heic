@@ -14,6 +14,8 @@ pub fn chroma_line(Array[Int32], Int32, Int32, Bool, Bool) -> Array[Int32]
 
 pub fn chroma_qp(Int32, Int32) -> Int32
 
+pub let deblock_cases : Array[DeblockCase]
+
 pub fn deblock_frame(Planes, FilterState, Int32, Int32, Int32, Bool) -> Result[Unit, FilterError]
 
 pub fn deblock_luma_apply(Array[Int32], LumaPlan, Int32, Bool, Bool) -> Array[Int32]
@@ -23,6 +25,8 @@ pub fn deblock_luma_plan(Array[Int32], Int32, Int32) -> LumaPlan
 pub let eo_offsets : Array[(Int32, Int32, Int32, Int32)]
 
 pub fn filter_state(Int32, Int32, Int32, Array[Int32], Array[Bool]) -> FilterState
+
+pub fn filter_state_from_blocks(Int32, Int32, Int32, Array[Bool], Array[Bool], Array[Bool], Array[Bool], Array[Bool], Array[Bool], Array[Int32], Array[Bool]) -> Result[FilterState, FilterError]
 
 pub let frame_0_cb : Bytes
 
@@ -197,6 +201,20 @@ pub(all) struct ChromaCase {
   no_q : Bool
   input : Array[Int32]
   want : Array[Int32]
+}
+
+pub(all) struct DeblockCase {
+  name : String
+  stream : Bytes
+  width : Int32
+  height : Int32
+  full : Bytes
+  plain : Bytes
+  beta_off : Int32
+  tc_off : Int32
+  deblock_disabled : Bool
+  has_ref : Bool
+  changed : Int32
 }
 
 pub(all) enum FilterError {

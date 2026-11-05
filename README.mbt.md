@@ -19,7 +19,10 @@ split·cbf 上下文与 8.4.2 MPM，真实 Go 编码器码流往返对拍）、C
 以及把它们接成整帧的 CTU quadtree/TU/PU 语法主循环（ctu 层：按 7.3.8 的
 bin 顺序驱动 quadtree → CU → transformTree → transformUnit，每个变换块调
 `reconstruct_block`）。`decode_i_frame` 现在对单 slice、单 tile、无 WPP 的
-Main 8bit 4:2:0 I 帧真正返回 `Yuv420p8`，与上游 `*_ref.yuv` 逐像素一致。
+Main 8bit 4:2:0 I 帧真正返回 `Yuv420p8`，与上游 `*_ref.yuv` 逐像素一致；
+帧级去块（8.7.2）也已接进 decode 路径：CTU 主循环记录真实的 TU/PU 边界、
+每 4×4 块 QP 与 cbf/noFilter，`deblock_frame` 据此只滤真正的边缘，
+`encoder_lossy_32x32.h265` 的 109 个像素变化由上游完整解码 YUV 逐字节验收。
 
 M1 只搬字节，不解码：给它一个 iPhone `.heic`，它告诉你「主图是哪个 item、
 载荷在文件哪个偏移、多长、编码参数是什么」。
@@ -69,13 +72,17 @@ cu_qp_delta、sign hiding、强帧内平滑、多 CTB 邻域）交给真实 Go �
 `DecodeNAL + Flush` 产出最终 planar YUV，并对其中 8 个带 `*_ref.yuv` 的
 固件逐字节断言；MoonBit `decode_i_frame` 对这 13 帧逐像素 byte-exact
 复现，trace 里 300 个变换块的坐标/模式/QP/cbf 由真实 `codingTreeUnit`
-导出作调试 oracle。每层 golden 固件在 CI 里都有 `--check`，另有独立 JS
-转录 crosscheck，手改一个字节就红。
+导出作调试 oracle。帧级去块另有一套端到端固件：真实 Go 解码器对 6 个单
+slice I 帧分别产出「含去块 / 关去块」的整帧 YUV 并 hook 出去块前的真实
+4×4 边界状态，其中 1 帧去块真生效（109 像素）、5 帧为 no-op 回归（4 帧带
+`*_ref.yuv`）；MoonBit `decode_i_frame` 逐像素复现含去块 YUV，crosscheck
+独立重算指纹、差异数与边界状态不变量。每层 golden 固件在 CI 里都有
+`--check`，另有独立 JS 转录 crosscheck，手改一个字节就红。
 
 下一步：把工具子集补齐到能覆盖 iPhone 4032×3024 I 帧——多 slice / 单
-tile 拼接、SAO 语法解析与帧级 SAO 应用、去块边界状态（8.7.2 的 BS/阈值
-驱动，内核已逐值对拍）、PCM、scaling list、transform skip、transquant
-bypass，以及 WPP/tiles 并行。目前 `decode_i_frame` 对打开这些工具的码流
+tile 拼接、SAO 语法解析与帧级 SAO 应用、PCM、scaling list、transform skip、
+transquant bypass，以及 WPP/tiles 并行。8.7.2 帧级去块驱动已接进 decode
+路径并端到端逐像素验收；目前 `decode_i_frame` 对打开其余这些工具的码流
 返回 `DecodeError`（不伪造像素），对多 slice 也明确拒绝；已接通的子集
 是单 slice、单 tile、无 WPP、无 SAO/PCM/scaling-list/transform-skip/
 transquant-bypass 的纯 I 帧，这部分已经 `*_ref.yuv` 逐像素验收通过。
@@ -94,11 +101,11 @@ hevc/cabac/        CABAC 算术解码器（M3 已实现，逐 bin 对拍）
 hevc/dsp/          扫描表与逆变换基矩阵（M3 已实现）
 hevc/recon/        反量化 / 2D 逆变换 / 帧内预测（M3 已实现，逐值对拍）
 hevc/residual/     残差系数语法 7.3.8.11（M3 已实现，真实码流对拍）
-hevc/loopfilter/   去块 8.7.2 + SAO 8.7.3（M3 已实现，整帧真值对拍）
+hevc/loopfilter/   去块 8.7.2 + SAO 8.7.3（M3 已实现，去块已接进 decode 路径）
 hevc/syntax/       CTU 级 CABAC 语法元素 7.3.8.2~10（M3 已实现，真实码流往返对拍）
 hevc/geometry/     CTU 空间状态 6.5.2/6.4.1/8.6.1/8.4.4.2.2（M3 已实现，逐值对拍）
 hevc/reconstruct/  单块重建链路：残差码流→像素（M3 已实现，逐样本对拍上游）
-hevc/ctu/          CTU quadtree/TU/PU 语法主循环（M3 已实现，整帧逐像素对拍）
+hevc/ctu/          CTU quadtree/TU/PU 语法主循环（M3 已实现，记录真实去块边界状态）
 hevc/decode/       Yuv420p8 / decode_i_frame：整帧解码入口（M3 已接通 I 帧子集）
 color/             YUV→RGB、色域（M4）
 io/png/ io/jpeg/   输出编码（M4）
