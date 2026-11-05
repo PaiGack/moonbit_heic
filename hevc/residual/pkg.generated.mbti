@@ -1,0 +1,101 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/residual"
+
+import {
+  "nrzhangsan/heic/hevc/cabac",
+}
+
+// Values
+pub fn decode_residual(@cabac.Decoder, Array[Int32], ResidualBlock, ResidualParams, Array[Int32]) -> Result[Bool, ResidualError]
+
+pub let last_ctx_cases : Array[LastCtxCase]
+
+pub fn last_sig_coeff_ctx(Int32, Int32, Int32) -> Int32
+
+pub let residual_cases : Array[ResidualCase]
+
+pub let scan_diag : Int32
+
+pub let scan_hor : Int32
+
+pub fn scan_index(Int32, Int32, Int32, Bool, Int32) -> Int32
+
+pub let scan_index_cases : Array[ScanIndexCase]
+
+pub let scan_ver : Int32
+
+pub fn sig_coeff_ctx(Int32, Int32, Int32, Int32, Int32, Int32) -> Int32
+
+pub let sig_coeff_ctx_want : Array[Int32]
+
+pub let sig_ctx_set_want : Array[Int32]
+
+// Errors
+
+// Types and methods
+pub(all) struct LastCtxCase {
+  log2_size : Int32
+  c_idx : Int32
+  bin_idx : Int32
+  want : Int32
+}
+
+pub(all) struct ResidualBlock {
+  log2_size : Int32
+  c_idx : Int32
+  pred_mode_intra : Int32
+  intra : Bool
+  transquant_bypass : Bool
+  max_transform_skip_size : Int32
+}
+
+pub(all) struct ResidualCase {
+  log2_size : Int32
+  c_idx : Int32
+  pred_mode : Int32
+  intra : Bool
+  sign_hiding : Bool
+  bytes : Bytes
+  coef : Array[Int32]
+}
+
+pub(all) enum ResidualError {
+  InvalidBlock
+  BadBin
+  InvalidLastSignificant
+}
+
+pub(all) struct ResidualParams {
+  persistent_rice_adaptation : Bool
+  chroma_array_type : Int32
+  coeff_range : Int32
+  sign_data_hiding : Bool
+  transform_skip_enabled : Bool
+  transform_skip_context : Bool
+}
+pub fn ResidualParams::main_420_8bit() -> Self
+
+pub(all) struct ScanIndexCase {
+  log2_size : Int32
+  c_idx : Int32
+  mode : Int32
+  intra : Bool
+  chroma : Int32
+  want : Int32
+}
+
+pub(all) struct SigCtxSet {
+  base : Int32
+  dc : Int32
+  small : Int32
+  prev_csbf : Int32
+  is4x4 : Bool
+  sb_dc : Bool
+  flat : Bool
+}
+pub fn SigCtxSet::at(Self, Int32, Int32) -> Int32
+pub fn SigCtxSet::new(Int32, Int32, Int32, Int32, Int32, Int32, Bool) -> Self
+
+// Type aliases
+
+// Traits
