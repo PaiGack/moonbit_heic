@@ -2,11 +2,13 @@ import {
   "nrzhangsan/heic/safe",
   "nrzhangsan/heic/hevc",
   "nrzhangsan/heic/hevc/recon",
+  "nrzhangsan/heic/hevc/loopfilter",
 }
 
 import {
   "nrzhangsan/heic/hevc/decode",
   "nrzhangsan/heic/hevc/recon",
+  "nrzhangsan/heic/hevc/loopfilter",
 } for "test"
 
 pkgtype(kind: "library")

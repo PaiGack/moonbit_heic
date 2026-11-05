@@ -79,14 +79,16 @@ pub fn alloc_frame(sps : @hevc.SPS) -> Result[Yuv420p8, DecodeError] {
 /// reads first (see `recon_params`). The reconstruction DSP layers below that
 /// loop -- dequantisation, 2D inverse transform, all 35 intra prediction
 /// modes, reference-sample smoothing and chroma QP -- are byte-exact checked
-/// in `hevc/recon`, and `recon_params` already uses `chroma_qp` from there.
+/// in `hevc/recon`. The loop-filter kernels of 8.7.2 / 8.7.3 (deblock and SAO)
+/// are byte-exact checked in `hevc/loopfilter`, and `loop_filter_params`
+/// already derives beta/tc through `@loopfilter.beta_tc` from there.
 ///
 /// What is still unwired is the top of the chain: the CABAC-driven CTU/TU/PU
-/// syntax loop that feeds those layers, plus deblock and SAO. A valid I frame
-/// therefore ends in NotImplemented. Returning an error here is deliberate: a
-/// port that fabricates pixels is worse than one that says the work is
-/// unfinished, and a malformed stream must never reach an unchecked array
-/// index.
+/// syntax loop that reconstructs the pixels those layers then filter. A valid
+/// I frame therefore ends in NotImplemented. Returning an error here is
+/// deliberate: a port that fabricates pixels is worse than one that says the
+/// work is unfinished, and a malformed stream must never reach an unchecked
+/// array index.
 pub fn decode_i_frame(
   sps : @hevc.SPS,
   pps : @hevc.PPS,
@@ -113,9 +115,15 @@ pub fn decode_i_frame(
     Ok(f) => f
     Err(e) => return Err(e)
   }
-  // Derive the reconstruction parameters the CTU loop will read; this is the
-  // one place the validated recon layer is already consulted by the decode
-  // path. The syntax loop that consumes them is not wired yet.
+  // Derive the reconstruction and loop-filter parameters the CTU loop will
+  // read; these are the places the validated recon / loopfilter layers are
+  // already consulted by the decode path. The syntax loop that reconstructs
+  // pixels and drives deblock_frame / sao_frame is not wired yet.
   let _params = recon_params(sps, pps, au.slices[0].header)
+  // The loop-filter switches are pure functions of the slice header, and
+  // beta_tc is the first derivation 8.7.2 makes. Deriving them here wires the
+  // verified loopfilter kernel into the decode path; the CTU loop that drives
+  // deblock_frame / sao_frame over the reconstructed pixels is still unwired.
+  let _lf = loop_filter_params(au.slices[0].header)
   Err(NotImplemented)
 }

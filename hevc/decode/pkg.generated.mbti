@@ -11,6 +11,8 @@ pub fn alloc_frame(@hevc.SPS) -> Result[Yuv420p8, DecodeError]
 
 pub fn decode_i_frame(@hevc.SPS, @hevc.PPS, @hevc.AccessUnit) -> Result[Yuv420p8, DecodeError]
 
+pub fn loop_filter_params(@hevc.SliceHeader) -> LoopFilterParams
+
 pub fn recon_params(@hevc.SPS, @hevc.PPS, @hevc.SliceHeader) -> ReconParams
 
 // Errors
@@ -34,6 +36,16 @@ pub(all) struct FrameBuffer {
 }
 pub fn FrameBuffer::new(Int64, Int64, Int32, Int32) -> Self raise @safe.Overflow
 pub fn FrameBuffer::total_size(Self) -> Int64
+
+pub(all) struct LoopFilterParams {
+  beta_off_div2 : Int32
+  tc_off_div2 : Int32
+  deblocking_disabled : Bool
+  sao_luma : Bool
+  sao_chroma : Bool
+  bs2_beta : Int32
+  bs2_tc : Int32
+}
 
 pub(all) struct ReconParams {
   qp_y : Int32

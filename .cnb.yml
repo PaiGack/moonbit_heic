@@ -65,6 +65,11 @@
             # 122488 values from an independent JS transcription (no Go/network).
             - node tools/gen_residual_golden.mjs --check
             - node tools/crosscheck_residual.mjs
+            # Loop-filter golden is real upstream Go deblock()/applySAO()
+            # truth; crosscheck re-derives all 126834 values from an
+            # independent JS transcription (no Go/network).
+            - node tools/gen_loopfilter_golden.mjs --check
+            - node tools/crosscheck_loopfilter.mjs
 
   pull_request:
     - <<: *moonbit
@@ -118,3 +123,8 @@
             # 122488 values from an independent JS transcription (no Go/network).
             - node tools/gen_residual_golden.mjs --check
             - node tools/crosscheck_residual.mjs
+            # Loop-filter golden is real upstream Go deblock()/applySAO()
+            # truth; crosscheck re-derives all 126834 values from an
+            # independent JS transcription (no Go/network).
+            - node tools/gen_loopfilter_golden.mjs --check
+            - node tools/crosscheck_loopfilter.mjs

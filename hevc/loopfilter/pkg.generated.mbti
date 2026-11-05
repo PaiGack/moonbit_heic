@@ -1,0 +1,302 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/loopfilter"
+
+// Values
+pub fn beta_tc(Int32, Int32, Int32, Int32, Int32) -> BetaTc
+
+pub let beta_tc_cases : Array[BetaTcCase]
+
+pub fn boundary_strength(FilterState, Int32, Int32, Int32, Int32, Bool) -> Int32
+
+pub let chroma_cases : Array[ChromaCase]
+
+pub fn chroma_line(Array[Int32], Int32, Int32, Bool, Bool) -> Array[Int32]
+
+pub fn chroma_qp(Int32, Int32) -> Int32
+
+pub fn deblock_frame(Planes, FilterState, Int32, Int32, Int32, Bool) -> Result[Unit, FilterError]
+
+pub fn deblock_luma_apply(Array[Int32], LumaPlan, Int32, Bool, Bool) -> Array[Int32]
+
+pub fn deblock_luma_plan(Array[Int32], Int32, Int32) -> LumaPlan
+
+pub let eo_offsets : Array[(Int32, Int32, Int32, Int32)]
+
+pub fn filter_state(Int32, Int32, Int32, Array[Int32], Array[Bool]) -> FilterState
+
+pub let frame_0_cb : Bytes
+
+pub let frame_0_cr : Bytes
+
+pub let frame_0_deb_cb : Bytes
+
+pub let frame_0_deb_cr : Bytes
+
+pub let frame_0_deb_y : Bytes
+
+pub let frame_0_sao_cb : Bytes
+
+pub let frame_0_sao_cr : Bytes
+
+pub let frame_0_sao_y : Bytes
+
+pub let frame_0_y : Bytes
+
+pub let frame_1_cb : Bytes
+
+pub let frame_1_cr : Bytes
+
+pub let frame_1_deb_cb : Bytes
+
+pub let frame_1_deb_cr : Bytes
+
+pub let frame_1_deb_y : Bytes
+
+pub let frame_1_sao_cb : Bytes
+
+pub let frame_1_sao_cr : Bytes
+
+pub let frame_1_sao_y : Bytes
+
+pub let frame_1_y : Bytes
+
+pub let frame_2_cb : Bytes
+
+pub let frame_2_cr : Bytes
+
+pub let frame_2_deb_cb : Bytes
+
+pub let frame_2_deb_cr : Bytes
+
+pub let frame_2_deb_y : Bytes
+
+pub let frame_2_sao_cb : Bytes
+
+pub let frame_2_sao_cr : Bytes
+
+pub let frame_2_sao_y : Bytes
+
+pub let frame_2_y : Bytes
+
+pub let frame_3_cb : Bytes
+
+pub let frame_3_cr : Bytes
+
+pub let frame_3_deb_cb : Bytes
+
+pub let frame_3_deb_cr : Bytes
+
+pub let frame_3_deb_y : Bytes
+
+pub let frame_3_sao_cb : Bytes
+
+pub let frame_3_sao_cr : Bytes
+
+pub let frame_3_sao_y : Bytes
+
+pub let frame_3_y : Bytes
+
+pub let frame_4_cb : Bytes
+
+pub let frame_4_cr : Bytes
+
+pub let frame_4_deb_cb : Bytes
+
+pub let frame_4_deb_cr : Bytes
+
+pub let frame_4_deb_y : Bytes
+
+pub let frame_4_sao_cb : Bytes
+
+pub let frame_4_sao_cr : Bytes
+
+pub let frame_4_sao_y : Bytes
+
+pub let frame_4_y : Bytes
+
+pub let frame_5_cb : Bytes
+
+pub let frame_5_cr : Bytes
+
+pub let frame_5_deb_cb : Bytes
+
+pub let frame_5_deb_cr : Bytes
+
+pub let frame_5_deb_y : Bytes
+
+pub let frame_5_sao_cb : Bytes
+
+pub let frame_5_sao_cr : Bytes
+
+pub let frame_5_sao_y : Bytes
+
+pub let frame_5_y : Bytes
+
+pub let frame_6_cb : Bytes
+
+pub let frame_6_cr : Bytes
+
+pub let frame_6_deb_cb : Bytes
+
+pub let frame_6_deb_cr : Bytes
+
+pub let frame_6_deb_y : Bytes
+
+pub let frame_6_sao_cb : Bytes
+
+pub let frame_6_sao_cr : Bytes
+
+pub let frame_6_sao_y : Bytes
+
+pub let frame_6_y : Bytes
+
+pub let frame_cases : Array[FrameCase]
+
+pub let luma_cases : Array[LumaCase]
+
+pub let sao_band_cases : Array[SaoBandCase]
+
+pub fn sao_band_row(Array[Int32], Int32, Array[Int32], Int32, Int32) -> Array[Int32]
+
+pub let sao_edge_cases : Array[SaoEdgeCase]
+
+pub fn sao_edge_row(Array[Int32], Array[Int32], Array[Int32], Array[Int32], Int32) -> Array[Int32]
+
+pub fn sao_frame(Planes, FilterState, Array[SaoParams], Bool) -> Result[Unit, SaoError]
+
+// Errors
+
+// Types and methods
+pub(all) struct BetaTc {
+  beta : Int32
+  tc : Int32
+}
+
+pub(all) struct BetaTcCase {
+  qp : Int32
+  bs : Int32
+  beta_off : Int32
+  tc_off : Int32
+  beta : Int32
+  tc : Int32
+}
+
+pub(all) struct BlockInfo {
+  intra : Bool
+  cbf : Bool
+  mut tu_v : Bool
+  mut tu_h : Bool
+  mut pu_v : Bool
+  mut pu_h : Bool
+}
+
+pub(all) struct ChromaCase {
+  tc : Int32
+  max_v : Int32
+  no_p : Bool
+  no_q : Bool
+  input : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) enum FilterError {
+  InvalidDimensions
+  ShortPlane
+}
+
+pub(all) struct FilterState {
+  width : Int32
+  height : Int32
+  ctb_log2 : Int32
+  min_tb_w : Int32
+  blk : Array[BlockInfo]
+  qp_y : Array[Int32]
+  no_filter : Array[Bool]
+}
+
+pub(all) struct FrameCase {
+  label : String
+  width : Int32
+  height : Int32
+  ctb_log2 : Int32
+  qp_y : Int32
+  beta_off : Int32
+  tc_off : Int32
+  deblock_off : Bool
+  sao_on : Bool
+  sao_type : Int32
+  sao_class : Int32
+  sao_band : Int32
+  sao_offset : Array[Int32]
+  qp_field : Array[Int32]
+  no_filter : Array[Bool]
+  y : Bytes
+  cb : Bytes
+  cr : Bytes
+  deb_y : Bytes
+  deb_cb : Bytes
+  deb_cr : Bytes
+  sao_y : Bytes
+  sao_cb : Bytes
+  sao_cr : Bytes
+}
+
+pub(all) struct LumaCase {
+  beta : Int32
+  tc : Int32
+  bit_depth : Int32
+  no_p : Bool
+  no_q : Bool
+  input : Array[Int32]
+  plan_mode : Int32
+  n_dp : Int32
+  n_dq : Int32
+  want : Array[Int32]
+}
+
+pub(all) struct LumaPlan {
+  tc : Int32
+  mode : Int32
+  n_dp : Int32
+  n_dq : Int32
+}
+
+pub(all) struct Planes {
+  y : Array[Int32]
+  cb : Array[Int32]
+  cr : Array[Int32]
+}
+
+pub(all) struct SaoBandCase {
+  band : Int32
+  shift : Int32
+  max_v : Int32
+  offset : Array[Int32]
+  src : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) struct SaoEdgeCase {
+  max_v : Int32
+  offset : Array[Int32]
+  src : Array[Int32]
+  na : Array[Int32]
+  nb : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) enum SaoError {
+  InvalidDimensions
+  ShortPlane
+}
+
+pub(all) struct SaoParams {
+  type_idx : Int32
+  class : Int32
+  band : Int32
+  offset : Array[Int32]
+}
+
+// Type aliases
+
+// Traits
