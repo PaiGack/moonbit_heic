@@ -1,0 +1,76 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/geometry"
+
+// Values
+pub let avail_cases : Array[AvailCase]
+
+pub fn gather_ref(Geometry, Array[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32) -> RefResult
+
+pub let mta_cases : Array[MtaCase]
+
+pub fn predict_qp(Int32, Int32, Int32, Int32, Int32, Int32, Bool, Bool) -> Int32
+
+pub let qp_cases : Array[QpCase]
+
+pub let ref_cases : Array[RefCase]
+
+// Errors
+
+// Types and methods
+pub(all) struct AvailCase {
+  x_curr : Int32
+  y_curr : Int32
+  x_n : Int32
+  y_n : Int32
+  want : Bool
+}
+
+pub(all) struct Geometry {
+  ctbs_w : Int32
+  ctbs_h : Int32
+  ctb_log2 : Int32
+  min_tb_log2 : Int32
+  min_tb_w : Int32
+  min_tb_h : Int32
+  pic_w : Int32
+  pic_h : Int32
+  min_tb_addr : Array[Int32]
+}
+pub fn Geometry::available(Self, Int32, Int32, Int32, Int32) -> Bool
+pub fn Geometry::new(Int64, Int64, Int32, Int32) -> Self
+pub fn Geometry::tb_index(Self, Int32, Int32) -> Int32
+
+pub(all) struct MtaCase {
+  ctbs_w : Int32
+  ctbs_h : Int32
+  ctb_log2 : Int32
+  min_tb_log2 : Int32
+  addr : Array[Int32]
+}
+
+pub(all) struct QpCase {
+  qp_prev : Int32
+  qp_a : Int32
+  qp_b : Int32
+  want : Int32
+}
+
+pub(all) struct RefCase {
+  x : Int32
+  y : Int32
+  n : Int32
+  c_idx : Int32
+  plane : Array[Int32]
+  cplane : Array[Int32]
+  samples : Array[Int32]
+  avail : Array[Bool]
+}
+
+pub(all) struct RefResult {
+  s : Array[Int32]
+  avail : Array[Bool]
+}
+
+// Type aliases
+
+// Traits

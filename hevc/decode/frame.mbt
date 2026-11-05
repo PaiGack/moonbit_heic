@@ -86,11 +86,15 @@ pub fn alloc_frame(sps : @hevc.SPS) -> Result[Yuv420p8, DecodeError] {
 /// The CTU-level CABAC syntax elements of 7.3.8.2..7.3.8.10 (SAO, intra
 /// modes, cu_qp_delta, cu_chroma_qp_offset, part_mode, split/cbf context
 /// indices) are byte-exact checked in `hevc/syntax` and their per-picture
-/// switches derived by `syntax_params`. What is still unwired is the very top
-/// of the chain: the CABAC-driven quadtree/TU/PU loop that walks the CTBs,
-/// calls those parses in order, reconstructs the pixels, and then drives
-/// deblock_frame / sao_frame. A valid I frame therefore ends in
-/// NotImplemented. Returning an error here is
+/// switches derived by `syntax_params`. The CTU spatial state (6.5.2
+/// MinTbAddrZs, 6.4.1 availability, 8.6.1 qPY_PRED, 8.4.4.2.2 gatherRef) is
+/// byte-exact checked in `hevc/geometry` and built by `geometry_params`, and
+/// `hevc/reconstruct` wires those layers plus the CABAC decoder to turn a real
+/// residual substream into pixels. What is still unwired is the very top of
+/// the chain: the quadtree/TU/PU loop that walks the CTBs, calls the parses in
+/// order, feeds each transform unit's CABAC substream to
+/// `reconstruct_block`, then drives deblock_frame / sao_frame. A valid I frame
+/// therefore ends in NotImplemented. Returning an error here is
 /// deliberate: a port that fabricates pixels is worse than one that says the
 /// work is unfinished, and a malformed stream must never reach an unchecked
 /// array index.
@@ -138,5 +142,16 @@ pub fn decode_i_frame(
   // quadtree/TU/PU syntax loop that walks the CTBs and calls these parses in
   // order, reconstructs the pixels, then drives deblock_frame / sao_frame.
   let _sy = syntax_params(sps, pps, au.slices[0].header)
+  // The CTU spatial-state layer is byte-exact checked in hevc/geometry:
+  // the whole 6.5.2 MinTbAddrZs table, 6.4.1 availability, 8.6.1 qPY_PRED
+  // and 8.4.4.2.2 reference-sample gathering. Building that table and the
+  // first qPY_PRED here (through the checked Geometry::new / predict_qp) is
+  // where the decode path first uses it; the single-block reconstruction
+  // chain in hevc/reconstruct is wired to the same geometry and CABAC decoder
+  // and reproduces upstream pixels sample for sample there. What is still
+  // unwired is the quadtree/TU/PU syntax loop that walks the CTBs, calls
+  // those parses in order, feeds each transform unit's CABAC substream to
+  // reconstruct_block, then drives deblock_frame / sao_frame.
+  let _ge = geometry_params(sps, au.slices[0].header)
   Err(NotImplemented)
 }

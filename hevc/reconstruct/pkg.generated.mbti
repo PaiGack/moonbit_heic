@@ -1,0 +1,39 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/reconstruct"
+
+import {
+  "nrzhangsan/heic/hevc/cabac",
+  "nrzhangsan/heic/hevc/geometry",
+}
+
+// Values
+pub let recon_cases : Array[ReconCase]
+
+pub fn reconstruct_block(@geometry.Geometry, Array[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32, @cabac.Decoder, Bool) -> Result[Unit, ReconstructError]
+
+// Errors
+
+// Types and methods
+pub(all) struct ReconCase {
+  log2 : Int32
+  mode : Int32
+  c_idx : Int32
+  qp : Int32
+  x : Int32
+  y : Int32
+  stride : Int32
+  coef : Array[Int32]
+  bytes : Bytes
+  plane_in : Array[Int32]
+  pred_plane : Array[Int32]
+  plane_out : Array[Int32]
+}
+
+pub(all) enum ReconstructError {
+  InvalidBlock
+  BadResidual
+}
+
+// Type aliases
+
+// Traits

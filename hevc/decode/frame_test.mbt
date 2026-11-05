@@ -219,3 +219,28 @@ test "syntax_params derives CTU syntax switches through the verified kernels" {
   // 8.6.1 with a zero delta is the identity for a valid SliceQpY (0..51).
   assert_eq(sy.qp_y_wrapped, h.qp_y)
 }
+
+///|
+test "geometry_params builds the CTU spatial state through the verified Geometry" {
+  let au = idr_au()
+  let h = au.slices[0].header
+  let gp = @decode.geometry_params(au.sps, h)
+  // A 128x128 picture, ctb_log2=6, min_tb_log2=2 -> 2x2 CTBs, 32x32 min TBs.
+  let g = gp.geom
+  assert_eq(g.ctbs_w, 2)
+  assert_eq(g.ctbs_h, 2)
+  assert_eq(g.min_tb_w, 32)
+  assert_eq(g.min_tb_h, 32)
+  assert_eq(g.min_tb_addr.length(), 32 * 32)
+  // The whole table must equal a fresh Geometry::new for the same SPS (i.e.
+  // geometry_params really consults the checked 6.5.2 derivation, not a stub).
+  let fresh = @geometry.Geometry::new(128L, 128L, 6, 2)
+  assert_eq(g.min_tb_addr, fresh.min_tb_addr)
+  // first_qp_pred: both neighbours unavailable -> SliceQpY.
+  assert_eq(gp.first_qp_pred, h.qp_y)
+  // Availability at the picture start: (0,0) has no left/above neighbour.
+  assert_eq(g.available(0, 0, -1, 0), false)
+  assert_eq(g.available(0, 0, 0, -1), false)
+  // (4,0) precedes (8,8) in z-scan, so its neighbour IS available.
+  assert_eq(g.available(8, 8, 4, 0), true)
+}

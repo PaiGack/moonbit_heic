@@ -4,6 +4,7 @@ import {
   "nrzhangsan/heic/hevc/recon",
   "nrzhangsan/heic/hevc/loopfilter",
   "nrzhangsan/heic/hevc/syntax",
+  "nrzhangsan/heic/hevc/geometry",
 }
 
 import {
@@ -11,6 +12,5 @@ import {
   "nrzhangsan/heic/hevc/recon",
   "nrzhangsan/heic/hevc/loopfilter",
   "nrzhangsan/heic/hevc/syntax",
+  "nrzhangsan/heic/hevc/geometry",
 } for "test"
-
-pkgtype(kind: "library")
