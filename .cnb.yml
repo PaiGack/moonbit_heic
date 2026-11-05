@@ -90,6 +90,14 @@
             # trace shape independently (no Go/network).
             - node tools/gen_frame_golden.mjs --check
             - node tools/crosscheck_frame.mjs
+            # Frame-level 8.7.2 deblocking: real upstream Go DecodeNAL
+            # output WITH/WITHOUT the loop filter for 6 single-slice I frames
+            # (1 with deblocking genuinely active), plus the captured real
+            # ctuDecoder boundary state. MoonBit decode_i_frame reproduces
+            # the filtered YUV byte for byte; crosscheck re-derives the
+            # fingerprints, changed-sample count and block-state invariants.
+            - node tools/gen_deblock_golden.mjs --check
+            - node tools/crosscheck_deblock.mjs
 
   pull_request:
     - <<: *moonbit
@@ -168,3 +176,11 @@
             # trace shape independently (no Go/network).
             - node tools/gen_frame_golden.mjs --check
             - node tools/crosscheck_frame.mjs
+            # Frame-level 8.7.2 deblocking: real upstream Go DecodeNAL
+            # output WITH/WITHOUT the loop filter for 6 single-slice I frames
+            # (1 with deblocking genuinely active), plus the captured real
+            # ctuDecoder boundary state. MoonBit decode_i_frame reproduces
+            # the filtered YUV byte for byte; crosscheck re-derives the
+            # fingerprints, changed-sample count and block-state invariants.
+            - node tools/gen_deblock_golden.mjs --check
+            - node tools/crosscheck_deblock.mjs

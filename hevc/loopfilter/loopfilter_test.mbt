@@ -151,3 +151,46 @@ test "malformed pictures return an error instead of trapping" {
     is Err(InvalidDimensions),
   )
 }
+
+///|
+test "filter_state_from_blocks accepts a real 4x4-raster state and refuses a short one" {
+  // 32x32 -> 8x8 = 64 blocks. A real I-frame state has every block intra,
+  // a legal QP, and no noFilter flag (no PCM / transquant bypass).
+  let n = 8 * 8
+  let intra = Array::make(n, true)
+  let cbf = Array::make(n, false)
+  let tu_v = Array::make(n, false)
+  let tu_h = Array::make(n, false)
+  let pu_v = Array::make(n, false)
+  let pu_h = Array::make(n, false)
+  let qp_y = Array::make(n, 26)
+  let no_filter = Array::make(n, false)
+  // One real TU edge at (8, 8): its 4x4 block carries tuV/tuH.
+  tu_v[2 * 8 + 2] = true
+  tu_h[2 * 8 + 2] = true
+  let st = match
+    @loopfilter.filter_state_from_blocks(
+      32, 32, 4, intra, cbf, tu_v, tu_h, pu_v, pu_h, qp_y, no_filter,
+    ) {
+    Ok(v) => v
+    Err(_) => fail("real block state was refused")
+  }
+  // An intra boundary has strength 2 (8.7.2.4), regardless of cbf.
+  assert_eq(@loopfilter.boundary_strength(st, 7, 8, 8, 8, true), 2)
+  // A short state is a caller bug, refused as Err rather than an unchecked
+  // array index / trap.
+  let short = Array::make(3, false)
+  assert_true(
+    @loopfilter.filter_state_from_blocks(
+      32, 32, 4, short, cbf, tu_v, tu_h, pu_v, pu_h, qp_y, no_filter,
+    )
+    is Err(@loopfilter.ShortPlane),
+  )
+  // Odd dimensions are invalid for 4:2:0 and must not reach an allocation.
+  assert_true(
+    @loopfilter.filter_state_from_blocks(
+      33, 32, 4, intra, cbf, tu_v, tu_h, pu_v, pu_h, qp_y, no_filter,
+    )
+    is Err(@loopfilter.InvalidDimensions),
+  )
+}

@@ -90,11 +90,12 @@ pub fn alloc_frame(sps : @hevc.SPS) -> Result[Yuv420p8, DecodeError] {
 /// no PCM, no scaling lists, no transform skip and no transquant bypass.
 /// `ctu_frame_input` derives those switches and refuses a stream that enables
 /// one; multi-slice streams are refused too, since each slice is its own
-/// CABAC substream. Frame-level deblock / SAO drivers are not wired: for the
-/// streams accepted here the upstream filters are a no-op, which is asserted
-/// byte for byte against the shipped `*_ref.yuv`. A malformed bin or a bad
-/// geometry returns `DecodeError` rather than reaching an unchecked array
-/// index, so a corrupt stream never traps.
+/// CABAC substream. Frame-level deblocking (8.7.2) is wired: the CTU walk
+/// records the real TU/PU boundary state and `deblock_frame` filters the
+/// reconstructed picture before it is copied into the returned bytes. SAO is
+/// still refused. A malformed bin or a bad geometry returns `DecodeError`
+/// rather than reaching an unchecked array index, so a corrupt stream never
+/// traps.
 ///
 pub fn decode_i_frame(
   sps : @hevc.SPS,
@@ -157,8 +158,45 @@ pub fn decode_i_frame(
       _ => return Err(TooLarge)
     },
   }
-  match
+  let deblock = match
     @ctu.decode_ctu_frame(dec, input.geom, input.params, planes, input.config) {
+    Ok(state) => state
+    Err(_) => return Err(InvalidStream)
+  }
+  // 8.7.2 frame-level deblocking: the CTU walk recorded the real 4x4-raster
+  // TU/PU boundaries, per-block QP and noFilter, so filter exactly the edges
+  // the upstream deblock() filters. The pure kernels behind deblock_frame are
+  // byte-exact checked in hevc/loopfilter; this is the first time the decode
+  // path drives them over a whole reconstructed picture. A stream with
+  // deblocking disabled skips the pass (it is a no-op for those streams,
+  // asserted byte for byte against the upstream reference YUV).
+  let lf = loop_filter_params(slice)
+  let fst = match
+    @loopfilter.filter_state_from_blocks(
+      input.params.width,
+      input.params.height,
+      sps.ctb_log2_size_y,
+      deblock.intra,
+      deblock.cbf,
+      deblock.tu_v,
+      deblock.tu_h,
+      deblock.pu_v,
+      deblock.pu_h,
+      deblock.qp_y,
+      deblock.no_filter,
+    ) {
+    Ok(v) => v
+    Err(_) => return Err(InvalidStream)
+  }
+  match
+    @loopfilter.deblock_frame(
+      { y: luma, cb: chroma, cr: chroma2, },
+      fst,
+      slice.qp_y,
+      lf.beta_off_div2,
+      lf.tc_off_div2,
+      lf.deblocking_disabled,
+    ) {
     Ok(_) => ()
     Err(_) => return Err(InvalidStream)
   }
@@ -171,8 +209,5 @@ pub fn decode_i_frame(
   for i in 0..<frame.v.length() {
     frame.v[i] = chroma2[i].to_byte()
   }
-  // The lower layers are byte-exact checked; the loop filter (8.7) is not
-  // wired at frame level yet. For the streams this port accepts it is a no-op
-  // (verified against the upstream reference YUV), so no separate pass runs.
   Ok(frame)
 }

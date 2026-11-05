@@ -86,6 +86,138 @@ pub(all) struct CtuPlanes {
 }
 
 ///|
+/// The 8.7.2 boundary state the quadtree/TU/PU walk records for the
+/// frame-level deblocking pass. Every array is a linear 4x4-raster grid
+/// (mv_w x mv_h), matching the upstream blk/qpY/noFilter layout: index
+/// (y >> 2) * mv_w + (x >> 2). This is deliberately independent of the
+/// z-scan min-TB addressing geometry.tb_index uses for reconstruction,
+/// because the upstream deblock reads its block state in raster order.
+pub(all) struct DeblockState {
+  mv_w : Int32
+  mv_h : Int32
+  intra : Array[Bool]
+  cbf : Array[Bool]
+  tu_v : Array[Bool]
+  tu_h : Array[Bool]
+  pu_v : Array[Bool]
+  pu_h : Array[Bool]
+  qp_y : Array[Int32]
+  no_filter : Array[Bool]
+}
+
+///|
+pub fn new_deblock_state(width : Int32, height : Int32) -> DeblockState {
+  let mv_w = (width + 3) / 4
+  let mv_h = (height + 3) / 4
+  let n = mv_w * mv_h
+  {
+    mv_w,
+    mv_h,
+    intra: Array::make(n, false),
+    cbf: Array::make(n, false),
+    tu_v: Array::make(n, false),
+    tu_h: Array::make(n, false),
+    pu_v: Array::make(n, false),
+    pu_h: Array::make(n, false),
+    qp_y: Array::make(n, 0),
+    no_filter: Array::make(n, false),
+  }
+}
+
+///|
+/// ceil of the number of 4x4 blocks a square region covers inside the
+/// picture, mirroring the upstream blocksIn(x, y, w, h, log2=2).
+fn deblock_blocks_in(
+  st : CtuState,
+  x : Int32,
+  y : Int32,
+  w : Int32,
+  h : Int32,
+) -> (Int32, Int32) {
+  let nw = (clip_i32(x + w, 0, st.params.width) - x + 3) / 4
+  let nh = (clip_i32(y + h, 0, st.params.height) - y + 3) / 4
+  (nw, nh)
+}
+
+///|
+/// 8.7.2.2 markTU: the left column and top row of a transform/coding block
+/// are real deblocking edges; cbf marks the covered blocks when set.
+fn mark_tu(st : CtuState, x : Int32, y : Int32, w : Int32, cbf : Bool) -> Unit {
+  let (nw, nh) = deblock_blocks_in(st, x, y, w, w)
+  for j in 0..<nh {
+    let row = ((y >> 2) + j) * st.deblock.mv_w + (x >> 2)
+    if cbf {
+      for i in 0..<nw {
+        let idx = row + i
+        if idx >= 0 && idx < st.deblock.cbf.length() {
+          st.deblock.cbf[idx] = true
+        }
+      }
+    }
+    if j == 0 {
+      for i in 0..<nw {
+        let idx = row + i
+        if idx >= 0 && idx < st.deblock.tu_h.length() {
+          st.deblock.tu_h[idx] = true
+        }
+      }
+    }
+    if row >= 0 && row < st.deblock.tu_v.length() {
+      st.deblock.tu_v[row] = true
+    }
+  }
+}
+
+///|
+/// 8.7.2.2 markPU: every covered block is intra for an I slice; the left
+/// column and top row are prediction-block edges.
+fn mark_pu(
+  st : CtuState,
+  x : Int32,
+  y : Int32,
+  w : Int32,
+  intra : Bool,
+) -> Unit {
+  let (nw, nh) = deblock_blocks_in(st, x, y, w, w)
+  for j in 0..<nh {
+    let row = ((y >> 2) + j) * st.deblock.mv_w + (x >> 2)
+    for i in 0..<nw {
+      let idx = row + i
+      if idx >= 0 && idx < st.deblock.intra.length() {
+        st.deblock.intra[idx] = intra
+      }
+    }
+    if j == 0 {
+      for i in 0..<nw {
+        let idx = row + i
+        if idx >= 0 && idx < st.deblock.pu_h.length() {
+          st.deblock.pu_h[idx] = true
+        }
+      }
+    }
+    if row >= 0 && row < st.deblock.pu_v.length() {
+      st.deblock.pu_v[row] = true
+    }
+  }
+}
+
+///|
+/// 8.6.1 setQP: qpYCur covers the whole coding unit in the 4x4 grid, and
+/// 8.7.2 reads it back as the average QP of the two sides of an edge.
+fn set_deblock_qp(st : CtuState, x : Int32, y : Int32, w : Int32) -> Unit {
+  let (nw, nh) = deblock_blocks_in(st, x, y, w, w)
+  for j in 0..<nh {
+    let row = ((y >> 2) + j) * st.deblock.mv_w + (x >> 2)
+    for i in 0..<nw {
+      let idx = row + i
+      if idx >= 0 && idx < st.deblock.qp_y.length() {
+        st.deblock.qp_y[idx] = st.qp_y_cur
+      }
+    }
+  }
+}
+
+///|
 /// The mutable state one CTU walk carries across coding tree blocks. The
 /// per-min-TB arrays use the same `tb_index` granularity as @geometry, so an
 /// availability query and a neighbour-mode lookup address the same cell.
@@ -95,6 +227,7 @@ priv struct CtuState {
   params : CtuParams
   planes : CtuPlanes
   config : @reconstruct.ReconConfig
+  deblock : DeblockState
   /// Per-min-TB state, indexed by geom.tb_index(x, y). Arrays are mutable by
   /// reference; the scalar fields below are marked mut because the loop
   /// carries them across CUs/CTBs.
@@ -488,6 +621,10 @@ fn transform_unit(
     st.cu_off_coded = true
   }
 
+  // 8.7.2.2: the transform block's left/top edges are real deblocking
+  // edges, and cbfLuma marks the covered 4x4 blocks (upstream markTU).
+  mark_tu(st, x, y, 1 << log2_size, cbf_luma)
+
   let qp_luma = st.qp_y_cur
   let qp_chroma = component_qp(st, 1, qp_luma)
   let qp_chroma2 = component_qp(st, 2, qp_luma)
@@ -658,6 +795,9 @@ fn coding_unit(
 
   // I slice: no cu_skip_flag, pred_mode is implicitly intra.
   st.cur_intra = true
+  // 8.7.2.2: every covered 4x4 block is intra, and the CU's left/top edges
+  // are prediction-block boundaries (upstream markPU).
+  mark_pu(st, x, y, size, true)
 
   // 7.3.8.5: part_mode is only present when the CU can be split into
   // prediction blocks -- for an I slice that is exactly the smallest CB.
@@ -714,9 +854,12 @@ fn coding_unit(
     st, x, y, x, y, log2_size, 0, 0, luma_modes, part_mode, false, false,
   )
   // 8.6.1: QpY covers the whole coding unit, even one with no residual, and
-  // qPY_PREV carries it to the next quantisation group.
+  // qPY_PREV carries it to the next quantisation group. 8.7.2.2 also marks
+  // the coding block boundary with no cbf and records QpY for deblocking.
   if r is Ok(_) {
     fill(st, st.qp_y, x, y, size, st.qp_y_cur)
+    mark_tu(st, x, y, size, false)
+    set_deblock_qp(st, x, y, size)
     st.qp_y_prev = st.qp_y_cur
   }
   r
@@ -793,14 +936,16 @@ pub fn decode_ctu_frame(
   params : CtuParams,
   planes : CtuPlanes,
   config : @reconstruct.ReconConfig,
-) -> Result[Unit, CtuError] {
+) -> Result[DeblockState, CtuError] {
   let n_tb = geom.min_tb_w * geom.min_tb_h
+  let deblock = new_deblock_state(params.width, params.height)
   let st : CtuState = {
     dec,
     geom,
     params,
     planes,
     config,
+    deblock,
     intra_mode: Array::make(n_tb, @syntax.intra_dc),
     intra_mode_c: Array::make(n_tb, @syntax.intra_dc),
     cu_depth: Array::make(n_tb, 0),
@@ -828,9 +973,9 @@ pub fn decode_ctu_frame(
       }
       // 7.3.8.1 end_of_slice_segment_flag via decodeTerminate.
       if dec.decode_terminate() != 0 {
-        return Ok(())
+        return Ok(st.deblock)
       }
     }
   }
-  Ok(())
+  Ok(st.deblock)
 }

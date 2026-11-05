@@ -8,9 +8,11 @@ import {
 }
 
 // Values
-pub fn decode_ctu_frame(@cabac.Decoder, @geometry.Geometry, CtuParams, CtuPlanes, @reconstruct.ReconConfig) -> Result[Unit, CtuError]
+pub fn decode_ctu_frame(@cabac.Decoder, @geometry.Geometry, CtuParams, CtuPlanes, @reconstruct.ReconConfig) -> Result[DeblockState, CtuError]
 
 pub let frame_cases : Array[FrameCase]
+
+pub fn new_deblock_state(Int32, Int32) -> DeblockState
 
 // Errors
 
@@ -53,6 +55,19 @@ pub(all) struct CtuPlanes {
   cr : Array[Int32]
   stride_y : Int32
   stride_c : Int32
+}
+
+pub(all) struct DeblockState {
+  mv_w : Int32
+  mv_h : Int32
+  intra : Array[Bool]
+  cbf : Array[Bool]
+  tu_v : Array[Bool]
+  tu_h : Array[Bool]
+  pu_v : Array[Bool]
+  pu_h : Array[Bool]
+  qp_y : Array[Int32]
+  no_filter : Array[Bool]
 }
 
 pub(all) struct FrameCase {

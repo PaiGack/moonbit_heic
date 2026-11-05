@@ -265,6 +265,67 @@ pub fn filter_state(
 }
 
 ///|
+/// Build the deblocking state from the REAL 4x4-raster block state the CTU
+/// quadtree/TU/PU walk recorded (8.7.2.2/8.7.2.4). Unlike filter_state,
+/// which fabricates a controlled "every 8x8 grid line is an edge" state for
+/// the pure-kernel golden, this uses the actual TU/PU boundaries, cbf, intra
+/// flags, per-block QP and noFilter of a decoded picture, so deblock_frame
+/// filters exactly the edges the upstream deblock() filters.
+///
+/// Every array is length mv_w * mv_h with mv_w = (width + 3) / 4. A malformed
+/// length is rejected by the bound checks inside deblock_edge; a short state
+/// here is a caller bug, so refuse it up front rather than trap.
+pub fn filter_state_from_blocks(
+  width : Int32,
+  height : Int32,
+  ctb_log2 : Int32,
+  intra : Array[Bool],
+  cbf : Array[Bool],
+  tu_v : Array[Bool],
+  tu_h : Array[Bool],
+  pu_v : Array[Bool],
+  pu_h : Array[Bool],
+  qp_y : Array[Int32],
+  no_filter : Array[Bool],
+) -> Result[FilterState, FilterError] {
+  let mv_w = (width + 3) / 4
+  let mv_h = (height + 3) / 4
+  let n = mv_w * mv_h
+  if width <= 0 || height <= 0 || width % 2 != 0 || height % 2 != 0 {
+    return Err(InvalidDimensions)
+  }
+  if intra.length() < n ||
+    cbf.length() < n ||
+    tu_v.length() < n ||
+    tu_h.length() < n ||
+    pu_v.length() < n ||
+    pu_h.length() < n ||
+    qp_y.length() < n ||
+    no_filter.length() < n {
+    return Err(ShortPlane)
+  }
+  let blk : Array[BlockInfo] = Array::make(n, {
+    intra: false,
+    cbf: false,
+    tu_v: false,
+    tu_h: false,
+    pu_v: false,
+    pu_h: false,
+  })
+  for i in 0..<n {
+    blk[i] = {
+      intra: intra[i],
+      cbf: cbf[i],
+      tu_v: tu_v[i],
+      tu_h: tu_h[i],
+      pu_v: pu_v[i],
+      pu_h: pu_h[i],
+    }
+  }
+  Ok({ width, height, ctb_log2, min_tb_w: mv_w, blk, qp_y, no_filter, })
+}
+
+///|
 /// Why deblock_frame refused a picture.
 pub(all) enum FilterError {
   InvalidDimensions
