@@ -148,3 +148,46 @@ test "recon_params chroma QP matches the Table 8-10 shape" {
   let r2 = @decode.recon_params(au.sps, p, h2)
   assert_eq(r2.qp_cb, 45)
 }
+
+///|
+test "loop_filter_params derives beta/tc through the verified kernel" {
+  let au = idr_au()
+  let h = au.slices[0].header
+  let lf = @decode.loop_filter_params(h)
+  assert_eq(lf.beta_off_div2, h.beta_offset_div2)
+  assert_eq(lf.tc_off_div2, h.tc_offset_div2)
+  assert_eq(lf.deblocking_disabled, h.deblocking_disabled)
+  assert_eq(lf.sao_luma, h.sao_luma)
+  assert_eq(lf.sao_chroma, h.sao_chroma)
+  // A boundary of strength 2 (an intra edge) at SliceQpY: the same value the
+  // byte-exact checked loopfilter kernel gives, so the decode path and the
+  // deblock driver cannot disagree about the first thing they compute.
+  let bt = @loopfilter.beta_tc(h.qp_y, 2, lf.beta_off_div2, lf.tc_off_div2, 8)
+  assert_eq(lf.bs2_beta, bt.beta)
+  assert_eq(lf.bs2_tc, bt.tc)
+}
+
+///|
+test "loop_filter_params honours the slice beta/tc offsets" {
+  let au = idr_au()
+  let h = {
+    ..au.slices[0].header,
+    qp_y: 30,
+    beta_offset_div2: 6,
+    tc_offset_div2: -6,
+  }
+  let lf = @decode.loop_filter_params(h)
+  // beta offset +12 and tc offset -12 must shift the clipped QP indices and
+  // therefore the beta/tc pair away from the neutral case.
+  let neutral = @decode.loop_filter_params({
+    ..h,
+    beta_offset_div2: 0,
+    tc_offset_div2: 0,
+  })
+  assert_eq(
+    lf.bs2_beta != neutral.bs2_beta || lf.bs2_tc != neutral.bs2_tc,
+    true,
+  )
+  assert_eq(lf.bs2_beta, @loopfilter.beta_tc(30, 2, 6, -6, 8).beta)
+  assert_eq(lf.bs2_tc, @loopfilter.beta_tc(30, 2, 6, -6, 8).tc)
+}

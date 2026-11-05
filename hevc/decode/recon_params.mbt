@@ -70,3 +70,44 @@ pub fn recon_params(
     deblocking_disabled: slice.deblocking_disabled,
   }
 }
+
+///|
+/// The slice-level loop-filter switches of 7.4.7.1, derived from the parsed
+/// header. `betaTc` of 8.7.2.5.3 is the first thing the deblocking driver
+/// computes for an edge; going through the byte-exact checked
+/// `@loopfilter.beta_tc` here means the decode path uses the same verified
+/// kernel the CTU loop will, not a hand-rolled QP lookup.
+pub(all) struct LoopFilterParams {
+  beta_off_div2 : Int32
+  tc_off_div2 : Int32
+  deblocking_disabled : Bool
+  sao_luma : Bool
+  sao_chroma : Bool
+  /// beta / tc at the slice QP for a boundary of strength 2 (an intra edge),
+  /// the first derivation the deblock pass makes.
+  bs2_beta : Int32
+  bs2_tc : Int32
+}
+
+///|
+/// Derives the loop-filter parameters for one I slice. `qp_y` is SliceQpY;
+/// the offsets are already clipped to -6..6 by the header parser, so beta_tc
+/// cannot be driven into an out-of-table index.
+pub fn loop_filter_params(slice : @hevc.SliceHeader) -> LoopFilterParams {
+  let bt = @loopfilter.beta_tc(
+    slice.qp_y,
+    2,
+    slice.beta_offset_div2,
+    slice.tc_offset_div2,
+    8,
+  )
+  {
+    beta_off_div2: slice.beta_offset_div2,
+    tc_off_div2: slice.tc_offset_div2,
+    deblocking_disabled: slice.deblocking_disabled,
+    sao_luma: slice.sao_luma,
+    sao_chroma: slice.sao_chroma,
+    bs2_beta: bt.beta,
+    bs2_tc: bt.tc,
+  }
+}
