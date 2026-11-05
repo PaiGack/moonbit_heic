@@ -1,0 +1,92 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/recon"
+
+// Values
+pub fn chroma_qp(Int32, Int32) -> Int32
+
+pub let chroma_qp_want : Array[Int32]
+
+pub fn dequant(Array[Int32], Array[Int32]?, Int32, Int32, Int32, Bool) -> Unit
+
+pub let dequant_cases : Array[DequantCase]
+
+pub fn filter_flag(Int32, Int32, Int32, Int32) -> Bool
+
+pub let intra_cases : Array[IntraCase]
+
+pub let intra_dc : Int32
+
+pub let intra_hor : Int32
+
+pub let intra_planar : Int32
+
+pub fn intra_predict(RefSamples, Int32, Int32, Int32) -> Array[Int32]
+
+pub let intra_ver : Int32
+
+pub fn inverse_transform(Array[Int32], Int32, Bool, Int32, Bool) -> Unit
+
+pub let ref_cases : Array[RefCase]
+
+pub let sub_cases : Array[SubCase]
+
+pub let transform_cases : Array[TransformCase]
+
+// Errors
+
+// Types and methods
+pub(all) struct DequantCase {
+  n : Int32
+  qp : Int32
+  m : Array[Int32]?
+  coef : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) struct IntraCase {
+  n : Int32
+  c_idx : Int32
+  mode : Int32
+  s : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) struct RefCase {
+  n : Int32
+  mode : Int32
+  c_idx : Int32
+  strong : Bool
+  disabled : Bool
+  avail : Array[Bool]
+  s : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) struct RefSamples {
+  mut s : Array[Int32]
+  n : Int32
+}
+pub fn RefSamples::corner(Self) -> Int32
+pub fn RefSamples::filter_ref(Self, Int32, Int32, Int32, Int32, Bool, Bool) -> Unit
+pub fn RefSamples::left(Self, Int32) -> Int32
+pub fn RefSamples::new(Int32, Array[Int32]) -> Self
+pub fn RefSamples::substitute(Self, Array[Bool], Int32) -> Unit
+pub fn RefSamples::top(Self, Int32) -> Int32
+
+pub(all) struct SubCase {
+  size : Int32
+  avail : Array[Bool]
+  s : Array[Int32]
+  want : Array[Int32]
+}
+
+pub(all) struct TransformCase {
+  n : Int32
+  dst : Bool
+  coef : Array[Int32]
+  want : Array[Int32]
+}
+
+// Type aliases
+
+// Traits

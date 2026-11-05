@@ -74,13 +74,19 @@ pub fn alloc_frame(sps : @hevc.SPS) -> Result[Yuv420p8, DecodeError] {
 ///|
 /// `decode_i_frame(sps, pps, au)` of the M3 deliverable.
 ///
-/// Validates the profile, rejects any non-I slice, and sizes the output
-/// planes. The reconstruction chain (CTU quadtree, intra prediction, residual
-/// decoding, inverse transform, deblock and SAO) is not wired up in this
-/// increment, so a valid I frame currently ends in NotImplemented. Returning
-/// an error here is deliberate: a port that fabricates pixels is worse than
-/// one that says the work is unfinished, and a malformed stream must never
-/// reach an unchecked array index.
+/// Validates the profile, rejects any non-I slice, sizes the output planes,
+/// and derives the per-picture reconstruction parameters that the CTU loop
+/// reads first (see `recon_params`). The reconstruction DSP layers below that
+/// loop -- dequantisation, 2D inverse transform, all 35 intra prediction
+/// modes, reference-sample smoothing and chroma QP -- are byte-exact checked
+/// in `hevc/recon`, and `recon_params` already uses `chroma_qp` from there.
+///
+/// What is still unwired is the top of the chain: the CABAC-driven CTU/TU/PU
+/// syntax loop that feeds those layers, plus deblock and SAO. A valid I frame
+/// therefore ends in NotImplemented. Returning an error here is deliberate: a
+/// port that fabricates pixels is worse than one that says the work is
+/// unfinished, and a malformed stream must never reach an unchecked array
+/// index.
 pub fn decode_i_frame(
   sps : @hevc.SPS,
   pps : @hevc.PPS,
@@ -107,5 +113,9 @@ pub fn decode_i_frame(
     Ok(f) => f
     Err(e) => return Err(e)
   }
+  // Derive the reconstruction parameters the CTU loop will read; this is the
+  // one place the validated recon layer is already consulted by the decode
+  // path. The syntax loop that consumes them is not wired yet.
+  let _params = recon_params(sps, pps, au.slices[0].header)
   Err(NotImplemented)
 }

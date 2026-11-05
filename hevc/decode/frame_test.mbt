@@ -111,3 +111,40 @@ test "a PPS naming another sequence is refused" {
     },
   )
 }
+
+///|
+test "recon_params derives QP from the real IDR slice" {
+  let au = idr_au()
+  let r = @decode.recon_params(au.sps, au.pps, au.slices[0].header)
+  // The stream's slice carries slice_qp_delta; whatever its value, the
+  // derived chroma QPs must equal the byte-exact chromaQP of the offset QP.
+  let qy = r.qp_y
+  assert_eq(qy, au.slices[0].header.qp_y)
+  let off_cb = au.pps.cb_qp_offset + au.slices[0].header.cb_qp_offset
+  let off_cr = au.pps.cr_qp_offset + au.slices[0].header.cr_qp_offset
+  let clip = v => if v < 0 { 0 } else if v > 57 { 57 } else { v }
+  assert_eq(r.qp_cb, @recon.chroma_qp(clip(qy + off_cb), 1))
+  assert_eq(r.qp_cr, @recon.chroma_qp(clip(qy + off_cr), 1))
+  assert_eq(r.min_tb_log2, au.sps.min_tb_log2_size_y)
+  assert_eq(r.max_tb_log2, au.sps.max_tb_log2_size_y)
+  assert_eq(r.ctb_log2, au.sps.ctb_log2_size_y)
+}
+
+///|
+test "recon_params chroma QP matches the Table 8-10 shape" {
+  let au = idr_au()
+  // A neutralised slice makes the arithmetic visible: qpY 25, zero offsets,
+  // in the identity region of Table 8-10 (qPi < 30 => Qp'C = qPi).
+  let h = { ..au.slices[0].header, qp_y: 25, cb_qp_offset: 0, cr_qp_offset: 0, }
+  let p = { ..au.pps, cb_qp_offset: 0, cr_qp_offset: 0, }
+  let r = @decode.recon_params(au.sps, p, h)
+  assert_eq(r.qp_cb, 25)
+  assert_eq(r.qp_cr, 25)
+  // qPi=30 is the first table entry (29); qPi=51 takes the linear tail - 6.
+  let h30 = { ..h, qp_y: 30, }
+  let r30 = @decode.recon_params(au.sps, p, h30)
+  assert_eq(r30.qp_cb, 29)
+  let h2 = { ..h, qp_y: 51, }
+  let r2 = @decode.recon_params(au.sps, p, h2)
+  assert_eq(r2.qp_cb, 45)
+}
