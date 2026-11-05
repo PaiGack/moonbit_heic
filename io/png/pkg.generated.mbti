@@ -1,15 +1,31 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "nrzhangsan/heic/io/png"
 
+import {
+  "nrzhangsan/heic/color",
+}
+
 // Values
+pub fn crc32(Bytes) -> UInt32
+
+pub fn encode(@color.Rgba8, options? : EncodeOptions) -> Bytes raise PngError
+
 pub fn has_signature(Bytes) -> Bool
 
 pub let signature : Bytes
 
 // Errors
-pub suberror NotYetImplemented
+pub suberror PngError {
+  InvalidImage
+}
 
 // Types and methods
+pub(all) struct EncodeOptions {
+  bit_depth : Int32
+  compression_level : Int32
+  icc : Bytes?
+}
+pub fn EncodeOptions::default() -> Self
 
 // Type aliases
 

@@ -1,17 +1,52 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "nrzhangsan/heic/io/jpeg"
 
+import {
+  "nrzhangsan/heic/color",
+}
+
 // Values
+pub let ac_chroma_bits : Array[Int32]
+
+pub let ac_chroma_values : Array[Int32]
+
+pub let ac_luma_bits : Array[Int32]
+
+pub let ac_luma_values : Array[Int32]
+
+pub let dc_chroma_bits : Array[Int32]
+
+pub let dc_chroma_values : Array[Int32]
+
+pub let dc_luma_bits : Array[Int32]
+
+pub let dc_luma_values : Array[Int32]
+
+pub fn encode(@color.Rgba8, options? : EncodeOptions) -> Bytes raise JpegError
+
 pub let eoi : Array[Int32]
 
 pub fn has_soi(Bytes) -> Bool
 
+pub let quant_chroma : Array[Int32]
+
+pub let quant_luma : Array[Int32]
+
 pub let soi : Array[Int32]
 
+pub let zigzag : Array[Int32]
+
 // Errors
-pub suberror NotYetImplemented
+pub suberror JpegError {
+  InvalidImage
+}
 
 // Types and methods
+pub(all) struct EncodeOptions {
+  quality : Int32
+  icc : Bytes?
+}
+pub fn EncodeOptions::default() -> Self
 
 // Type aliases
 

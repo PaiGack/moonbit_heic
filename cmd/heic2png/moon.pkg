@@ -2,9 +2,23 @@ import {
   "moonbitlang/core/async",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/env",
-  "nrzhangsan/heic/io/png",
   "moonbitlang/core/async/fs",
   "moonbitlang/core/async/stdio",
+  "nrzhangsan/heic/heif",
+  "nrzhangsan/heic/hevc",
+  "nrzhangsan/heic/hevc/decode",
+  "nrzhangsan/heic/color",
+  "nrzhangsan/heic/image",
+  "nrzhangsan/heic/io/png",
+  "nrzhangsan/heic/io/jpeg",
 }
+
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/async",
+    "moonbitlang/core/async/fs",
+    "moonbitlang/core/async/stdio",
+  ],
+)
 
 pkgtype(kind: "executable")

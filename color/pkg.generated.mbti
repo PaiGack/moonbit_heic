@@ -2,18 +2,52 @@
 package "nrzhangsan/heic/color"
 
 // Values
+pub fn apply_alpha(Rgba8, Bytes) -> Rgba8 raise ColorError
+
+pub fn apply_transfer(ColorDescription, Int32) -> Int32 raise ColorError
+
+pub fn hlg_to_linear(Int32) -> Double
+
 pub let matrix_shift : Int32
 
+pub fn pq_to_linear(Int32) -> Double
+
+pub fn transfer_is_identity(Int32) -> Bool
+
+pub fn yuv420p_to_rgba8(ColorDescription, Bytes, Bytes, Bytes, Int64, Int64) -> Rgba8 raise ColorError
+
+pub fn yuv_to_rgb(ColorDescription, ColorMatrix, Int32, Int32, Int32) -> (Int32, Int32, Int32)
+
 // Errors
-pub suberror NotYetImplemented
+pub suberror ColorError {
+  UnsupportedMatrix(Int32)
+  UnsupportedTransfer(Int32)
+  InvalidGeometry
+}
 
 // Types and methods
+pub(all) struct ColorDescription {
+  matrix : Int32
+  transfer : Int32
+  full_range : Bool
+}
+pub fn ColorDescription::default() -> Self
+pub fn ColorDescription::new(Int32, Int32, Bool) -> Self
+
 pub(all) struct ColorMatrix {
   kr : Int32
   kb : Int32
   shift : Int32
 }
-pub fn ColorMatrix::from_matrix_coefficients(Int32) -> Self raise NotYetImplemented
+pub fn ColorMatrix::from_matrix_coefficients(Int32) -> Self raise ColorError
+
+pub(all) struct Rgba8 {
+  width : Int64
+  height : Int64
+  data : Bytes
+}
+pub fn Rgba8::pixel(Self, Int64, Int64) -> (Int32, Int32, Int32, Int32) raise ColorError
+pub fn Rgba8::to_rgba16(Self) -> Bytes raise ColorError
 
 // Type aliases
 

@@ -1,0 +1,55 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/image"
+
+import {
+  "nrzhangsan/heic/color",
+}
+
+// Values
+pub fn color_from_colr(Int32, Int32, Bool, Bool) -> @color.ColorDescription
+
+pub fn crop(@color.Rgba8, Crop) -> @color.Rgba8 raise TransformError
+
+pub fn orient(@color.Rgba8, Orientation) -> @color.Rgba8 raise TransformError
+
+pub fn render(RenderInput) -> @color.Rgba8 raise
+
+pub fn rgba8(Int64, Int64, Bytes) -> @color.Rgba8 raise TransformError
+
+// Errors
+pub suberror TransformError {
+  InvalidCrop
+  InvalidGeometry
+}
+
+// Types and methods
+pub(all) struct Crop {
+  width : Int64
+  height : Int64
+  x : Int64
+  y : Int64
+}
+pub fn Crop::new(Int64, Int64, Int64, Int64) -> Self
+
+pub(all) struct Orientation {
+  angle : Int32
+  mirror : Int32?
+}
+pub fn Orientation::new(Int32, Int32?) -> Self
+
+pub(all) struct RenderInput {
+  y : Bytes
+  u : Bytes
+  v : Bytes
+  width : Int64
+  height : Int64
+  color : @color.ColorDescription
+  orientation : Orientation
+  crop_rect : Crop?
+  alpha : Bytes?
+  icc : Bytes?
+}
+
+// Type aliases
+
+// Traits

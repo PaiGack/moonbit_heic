@@ -1,5 +1,23 @@
+options(
+  "allow-experimental-packages": [
+    "moonbitlang/core/compress/zlib",
+    "moonbitlang/core/compress/flate",
+  ],
+)
+
+import {
+  "moonbitlang/core/compress/zlib",
+  "moonbitlang/core/compress/flate",
+  "nrzhangsan/heic/safe",
+  "nrzhangsan/heic/color",
+}
+
 import {
   "nrzhangsan/heic/io/png",
+  "nrzhangsan/heic/color",
+  "nrzhangsan/heic/image",
+  "nrzhangsan/heic/safe",
+  "moonbitlang/core/compress/zlib",
 } for "test"
 
 pkgtype(kind: "library")
