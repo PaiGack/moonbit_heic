@@ -4,8 +4,8 @@
 再和**独立写的** JS BT.709 参考逐字节算 PSNR；顺带测四后端耗时和产物体积。
 
 ```bash
-node tools/e2e/run.mjs --smoke      # CI 冒烟：1 张 16x16，native 单后端
-node tools/e2e/run.mjs              # 全量：5 张固件 + 4 后端
+node tools/e2e/run.mjs --smoke      # CI 冒烟：1 张 16x16，单后端（有 C 编译器用 native，否则 wasm）
+node tools/e2e/run.mjs              # 全量：5 张固件 + 最多 4 后端（无 C 编译器时 3 个）
 node --test tools/e2e/             # harness 自测
 ```
 
@@ -41,4 +41,6 @@ Issue 的「外部对照」要求与 `heif-convert` / libheif 比 PSNR，并用 
 `@fs` / `@stdio` 只在 native / wasm 上实现，所以 `heic2png` / `heicinfo`
 两个命令只在 native / wasm 真能读文件。`cmd/bench` 用内嵌固件 +
 `println` + `@env.now`，四个后端（native / wasm / wasm-gc / js）都能编译
-并跑出耗时，这是性能记录的数据来源。
+并跑出耗时，这是性能记录的数据来源。native 后端还需要系统里有 C 编译器；
+`run.mjs` 会检测，缺失时冒烟自动改用 wasm（全量报告则跳过 native），这样
+在 `debian:stable-slim` 这类精简镜像里也能跑，不必为冒烟装整套工具链。

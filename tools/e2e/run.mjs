@@ -30,7 +30,19 @@ const golden = JSON.parse(readFileSync(join(root, "tools/frame_golden.json"), "u
 const CASES = smoke
   ? ["angular_grad.h265"]
   : ["angular_grad.h265", "grad64.h265", "ramp64.h265", "qp_small.h265", "signhide.h265"];
-const BACKENDS = smoke ? ["native"] : ["native", "wasm", "wasm-gc", "js"];
+// The native backend needs a system C compiler, which slim CI images do not
+// ship. wasm / wasm-gc / js do not. Keep native in the report whenever a
+// compiler is available, but never fail the smoke just because one is missing.
+const hasCCompiler = () => {
+  if (process.env.MOON_CC) return true;
+  const r = spawnSync("sh", ["-c", "command -v cc || command -v gcc || command -v clang"], { encoding: "utf8" });
+  return r.status === 0 && (r.stdout ?? "").trim().length > 0;
+};
+const nativeOK = hasCCompiler();
+const allBackends = ["native", "wasm", "wasm-gc", "js"];
+const BACKENDS = smoke
+  ? [nativeOK ? "native" : "wasm"]
+  : allBackends.filter((t) => t !== "native" || nativeOK);
 const assert = (ok, msg) => { if (!ok) throw new Error(msg); };
 const dir = mkdtempSync(join(tmpdir(), "m5-e2e-"));
 
