@@ -50,6 +50,41 @@ function bytesArr(arr, indent) {
   }
   return 'Bytes::from_array([\n' + lines.join('\n') + '\n  ])';
 }
+
+// MoonBit caps a single text segment (the lines between two `///|` markers)
+// at ~16384 lines; with `--deny-warn` an over-long segment is a hard error.
+// A big bitstream used to be one ~19000-line segment inside its case struct.
+// Split large byte arrays into several top-level `let` helpers, each in its
+// own `///|` block, and join the pieces back with `+` (Array[Byte]).
+const CHUNK_LINES = 3000; // 9 bytes per line -> 27000 bytes per helper block
+function byteLines(arr, indent) {
+  const lines = [];
+  for (let i = 0; i < arr.length; i += 9) {
+    lines.push(indent + arr.slice(i, i + 9).map(b => `b'\\x${b.toString(16).padStart(2, '0')}'`).join(', ') + ',');
+  }
+  return lines;
+}
+// Pushes helper `let` blocks to L (when needed) and returns the expression
+// to use for a Bytes field.
+function emitBytes(arr, indent, vn, field) {
+  const lines = byteLines(arr, indent);
+  if (lines.length <= CHUNK_LINES) {
+    return bytesArr(arr, indent);
+  }
+  const chunkSize = CHUNK_LINES * 9;
+  const parts = [];
+  let pi = 0;
+  for (let off = 0; off < arr.length; off += chunkSize, pi++) {
+    const name = `${vn}_${field}_p${pi}`;
+    L.push('///|');
+    L.push(`let ${name} : Array[Byte] = [`);
+    for (const line of byteLines(arr.slice(off, off + chunkSize), '  ')) L.push(line);
+    L.push(']');
+    L.push('');
+    parts.push(name);
+  }
+  return `Bytes::from_array(${parts.join(' + ')})`;
+}
 const sha = b => crypto.createHash('sha256').update(Buffer.from(b)).digest('hex');
 
 // Large frames keep a fingerprint + 64 evenly spaced probe samples.
@@ -117,11 +152,15 @@ for (let ci = 0; ci < raw.cases.length; ci++) {
   const pc = big ? { hash: String(c.checksum), nonzero: c.nonzero } : { hash: '0', nonzero: 0 };
   const vn = `frame2_case_${ci}`;
   caseNames.push(vn);
+  // Compute byte-field expressions first: emitBytes may push helper `let`
+  // blocks (in their own `///|` segments) that must precede the case struct.
+  const streamExpr = emitBytes(stream, '    ', vn, 'stream');
+  const yuvExpr = big ? 'b""' : emitBytes(yuv, '    ', vn, 'yuv');
   L.push('///|');
   L.push(`pub let ${vn} : Frame2Case = {`);
   L.push(`  name: ${JSON.stringify(c.name)},`);
-  L.push(`  stream: ${bytesArr(stream, '    ')},`);
-  L.push(`  yuv: ${big ? 'b""' : bytesArr(yuv, '    ')},`);
+  L.push(`  stream: ${streamExpr},`);
+  L.push(`  yuv: ${yuvExpr},`);
   L.push(`  width: ${c.width},`);
   L.push(`  height: ${c.height},`);
   L.push(`  has_ref: ${boolLit(c.has_ref)},`);
