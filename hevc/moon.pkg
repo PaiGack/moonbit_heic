@@ -1,10 +1,10 @@
 import {
   "moonbitlang/core/cmp",
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/safe",
 }
 
 import {
-  "nrzhangsan/heic/hevc",
+  "PaiGack/heic/hevc",
 } for "test"
 
 pkgtype(kind: "library")

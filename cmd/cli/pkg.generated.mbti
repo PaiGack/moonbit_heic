@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/cmd/cli"
+package "PaiGack/heic/cmd/cli"
 
 import {
-  "nrzhangsan/heic/cmd/convert",
+  "PaiGack/heic/cmd/convert",
 }
 
 // Values

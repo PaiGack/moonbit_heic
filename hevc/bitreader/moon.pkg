@@ -1,5 +1,5 @@
 import {
-  "nrzhangsan/heic/hevc/bitreader",
+  "PaiGack/heic/hevc/bitreader",
 } for "test"
 
 pkgtype(kind: "library")

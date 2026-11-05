@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/reconstruct"
+package "PaiGack/heic/hevc/reconstruct"
 
 import {
-  "nrzhangsan/heic/hevc/cabac",
-  "nrzhangsan/heic/hevc/geometry",
+  "PaiGack/heic/hevc/cabac",
+  "PaiGack/heic/hevc/geometry",
 }
 
 // Values

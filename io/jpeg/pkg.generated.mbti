@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/io/jpeg"
+package "PaiGack/heic/io/jpeg"
 
 import {
-  "nrzhangsan/heic/color",
+  "PaiGack/heic/color",
 }
 
 // Values

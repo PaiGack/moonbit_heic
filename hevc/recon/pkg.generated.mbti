@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/recon"
+package "PaiGack/heic/hevc/recon"
 
 // Values
 pub fn chroma_qp(Int32, Int32) -> Int32

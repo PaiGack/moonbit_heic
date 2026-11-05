@@ -1,7 +1,7 @@
 import {
-  "nrzhangsan/heic/hevc/cabac",
-  "nrzhangsan/heic/hevc/syntax",
-  "nrzhangsan/heic/hevc/geometry",
-  "nrzhangsan/heic/hevc/reconstruct",
-  "nrzhangsan/heic/hevc/recon",
+  "PaiGack/heic/hevc/cabac",
+  "PaiGack/heic/hevc/syntax",
+  "PaiGack/heic/hevc/geometry",
+  "PaiGack/heic/hevc/reconstruct",
+  "PaiGack/heic/hevc/recon",
 }

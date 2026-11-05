@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/loopfilter"
+package "PaiGack/heic/hevc/loopfilter"
 
 // Values
 pub fn beta_tc(Int32, Int32, Int32, Int32, Int32) -> BetaTc

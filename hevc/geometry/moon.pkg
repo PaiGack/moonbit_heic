@@ -1,7 +1,7 @@
 import {
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/safe",
 }
 
 import {
-  "nrzhangsan/heic/hevc/geometry",
+  "PaiGack/heic/hevc/geometry",
 } for "test"

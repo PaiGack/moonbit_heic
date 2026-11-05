@@ -1,12 +1,12 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/decode"
+package "PaiGack/heic/hevc/decode"
 
 import {
-  "nrzhangsan/heic/hevc",
-  "nrzhangsan/heic/hevc/ctu",
-  "nrzhangsan/heic/hevc/geometry",
-  "nrzhangsan/heic/hevc/reconstruct",
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/hevc",
+  "PaiGack/heic/hevc/ctu",
+  "PaiGack/heic/hevc/geometry",
+  "PaiGack/heic/hevc/reconstruct",
+  "PaiGack/heic/safe",
 }
 
 // Values

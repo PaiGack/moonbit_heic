@@ -1,9 +1,9 @@
 import {
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/safe",
 }
 
 import {
-  "nrzhangsan/heic/hevc/cabac",
+  "PaiGack/heic/hevc/cabac",
 } for "test"
 
 pkgtype(kind: "library")

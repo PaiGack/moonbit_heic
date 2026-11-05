@@ -1,12 +1,12 @@
 import {
-  "nrzhangsan/heic/hevc/geometry",
-  "nrzhangsan/heic/hevc/recon",
-  "nrzhangsan/heic/hevc/residual",
-  "nrzhangsan/heic/hevc/cabac",
+  "PaiGack/heic/hevc/geometry",
+  "PaiGack/heic/hevc/recon",
+  "PaiGack/heic/hevc/residual",
+  "PaiGack/heic/hevc/cabac",
 }
 
 import {
-  "nrzhangsan/heic/hevc/reconstruct",
-  "nrzhangsan/heic/hevc/geometry",
-  "nrzhangsan/heic/hevc/cabac",
+  "PaiGack/heic/hevc/reconstruct",
+  "PaiGack/heic/hevc/geometry",
+  "PaiGack/heic/hevc/cabac",
 } for "test"

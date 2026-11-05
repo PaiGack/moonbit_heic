@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/geometry"
+package "PaiGack/heic/hevc/geometry"
 
 // Values
 pub let avail_cases : Array[AvailCase]

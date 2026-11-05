@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/dsp"
+package "PaiGack/heic/hevc/dsp"
 
 // Values
 pub let dst4_input : Array[Int32]

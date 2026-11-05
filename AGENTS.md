@@ -15,7 +15,7 @@ You can browse and install extra skills here:
 - In the toplevel directory, there is a `moon.mod` file listing module
   metadata.
 
-- The module is `nrzhangsan/heic`. Packages, one per milestone:
+- The module is `PaiGack/heic`. Packages, one per milestone:
   `safe/` (64-bit arithmetic helpers), `heif/` (ISOBMFF container),
   `hevc/` (NAL + parameter sets), `hevc/bitreader/`, `hevc/headers/`,
   `hevc/cabac/`, `hevc/decode/`, `color/`, `io/png/`, `io/jpeg/`,

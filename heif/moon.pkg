@@ -3,7 +3,7 @@ import {
 }
 
 import {
-  "nrzhangsan/heic/heif",
+  "PaiGack/heic/heif",
   "moonbitlang/core/encoding/utf8",
 } for "test"
 

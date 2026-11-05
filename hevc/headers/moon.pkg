@@ -1,10 +1,10 @@
 import {
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/safe",
 }
 
 import {
-  "nrzhangsan/heic/hevc/headers",
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/hevc/headers",
+  "PaiGack/heic/safe",
 } for "test"
 
 pkgtype(kind: "library")

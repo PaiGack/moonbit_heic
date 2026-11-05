@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/color"
+package "PaiGack/heic/color"
 
 // Values
 pub fn apply_alpha(Rgba8, Bytes) -> Rgba8 raise ColorError

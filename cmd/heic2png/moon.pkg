@@ -1,8 +1,8 @@
 import {
   "moonbitlang/core/env",
   "moonbitlang/core/async",
-  "nrzhangsan/heic/cmd/cli",
-  "nrzhangsan/heic/cmd/convert",
+  "PaiGack/heic/cmd/cli",
+  "PaiGack/heic/cmd/convert",
 }
 
 options(

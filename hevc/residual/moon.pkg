@@ -1,10 +1,10 @@
 import {
-  "nrzhangsan/heic/hevc/cabac",
-  "nrzhangsan/heic/hevc/dsp",
+  "PaiGack/heic/hevc/cabac",
+  "PaiGack/heic/hevc/dsp",
 }
 
 import {
-  "nrzhangsan/heic/hevc/residual",
+  "PaiGack/heic/hevc/residual",
 } for "test"
 
 pkgtype(kind: "library")

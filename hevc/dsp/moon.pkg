@@ -2,7 +2,7 @@ import {
 }
 
 import {
-  "nrzhangsan/heic/hevc/dsp",
+  "PaiGack/heic/hevc/dsp",
 } for "test"
 
 pkgtype(kind: "library")

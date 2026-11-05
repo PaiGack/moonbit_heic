@@ -1,9 +1,9 @@
 import {
-  "nrzhangsan/heic/heif",
-  "nrzhangsan/heic/hevc",
-  "nrzhangsan/heic/hevc/decode",
-  "nrzhangsan/heic/color",
-  "nrzhangsan/heic/image",
-  "nrzhangsan/heic/io/png",
-  "nrzhangsan/heic/io/jpeg",
+  "PaiGack/heic/heif",
+  "PaiGack/heic/hevc",
+  "PaiGack/heic/hevc/decode",
+  "PaiGack/heic/color",
+  "PaiGack/heic/image",
+  "PaiGack/heic/io/png",
+  "PaiGack/heic/io/jpeg",
 }

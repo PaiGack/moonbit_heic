@@ -1,14 +1,14 @@
 import {
   "moonbitlang/core/math",
-  "nrzhangsan/heic/safe",
-  "nrzhangsan/heic/color",
+  "PaiGack/heic/safe",
+  "PaiGack/heic/color",
 }
 
 import {
-  "nrzhangsan/heic/io/jpeg",
-  "nrzhangsan/heic/color",
-  "nrzhangsan/heic/image",
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/io/jpeg",
+  "PaiGack/heic/color",
+  "PaiGack/heic/image",
+  "PaiGack/heic/safe",
 } for "test"
 
 pkgtype(kind: "library")

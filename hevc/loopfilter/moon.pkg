@@ -1,5 +1,5 @@
 import {
-  "nrzhangsan/heic/hevc/loopfilter",
+  "PaiGack/heic/hevc/loopfilter",
 } for "test"
 
 pkgtype(kind: "library")

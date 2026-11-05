@@ -1,15 +1,15 @@
 import {
-  "nrzhangsan/heic/safe",
-  "nrzhangsan/heic/color",
+  "PaiGack/heic/safe",
+  "PaiGack/heic/color",
 }
 
 import {
-  "nrzhangsan/heic/image",
-  "nrzhangsan/heic/color",
-  "nrzhangsan/heic/hevc",
-  "nrzhangsan/heic/hevc/decode",
-  "nrzhangsan/heic/io/png",
-  "nrzhangsan/heic/io/jpeg",
+  "PaiGack/heic/image",
+  "PaiGack/heic/color",
+  "PaiGack/heic/hevc",
+  "PaiGack/heic/hevc/decode",
+  "PaiGack/heic/io/png",
+  "PaiGack/heic/io/jpeg",
 } for "test"
 
 pkgtype(kind: "library")

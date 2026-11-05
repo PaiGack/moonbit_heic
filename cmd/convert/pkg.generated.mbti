@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/cmd/convert"
+package "PaiGack/heic/cmd/convert"
 
 // Values
 pub fn convert(Bytes, Options) -> Result[Bytes, ConvertError]

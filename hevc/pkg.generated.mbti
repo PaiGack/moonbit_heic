@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc"
+package "PaiGack/heic/hevc"
 
 // Values
 pub fn bits_at(Bytes, Int32, Int32) -> UInt32

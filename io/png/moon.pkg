@@ -8,15 +8,15 @@ options(
 import {
   "moonbitlang/core/compress/zlib",
   "moonbitlang/core/compress/flate",
-  "nrzhangsan/heic/safe",
-  "nrzhangsan/heic/color",
+  "PaiGack/heic/safe",
+  "PaiGack/heic/color",
 }
 
 import {
-  "nrzhangsan/heic/io/png",
-  "nrzhangsan/heic/color",
-  "nrzhangsan/heic/image",
-  "nrzhangsan/heic/safe",
+  "PaiGack/heic/io/png",
+  "PaiGack/heic/color",
+  "PaiGack/heic/image",
+  "PaiGack/heic/safe",
   "moonbitlang/core/compress/zlib",
 } for "test"
 

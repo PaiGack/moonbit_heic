@@ -1,9 +1,9 @@
 import {
-  "nrzhangsan/heic/hevc/cabac",
+  "PaiGack/heic/hevc/cabac",
 }
 
 import {
-  "nrzhangsan/heic/hevc/syntax",
+  "PaiGack/heic/hevc/syntax",
 } for "test"
 
 pkgtype(kind: "library")

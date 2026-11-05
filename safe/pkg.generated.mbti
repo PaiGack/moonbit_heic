@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/safe"
+package "PaiGack/heic/safe"
 
 // Values
 pub fn add(Int64, Int64) -> Int64

@@ -36,7 +36,7 @@
 # 上游
 DUMP_DIR=heif/testdata go test ./heic -run TestDump -v > /tmp/up.txt
 # MoonBit
-moon test -p nrzhangsan/heic/heif
+moon test -p PaiGack/heic/heif
 # 比较
 for f in _build/actual_*.heic.json; do
   n=$(basename "$f" .json); n=${n#actual_}

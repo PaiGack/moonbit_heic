@@ -4,7 +4,7 @@ import {
   "moonbitlang/core/async",
   "moonbitlang/core/async/fs",
   "moonbitlang/core/async/stdio",
-  "nrzhangsan/heic/cmd/convert",
+  "PaiGack/heic/cmd/convert",
 }
 
 options(

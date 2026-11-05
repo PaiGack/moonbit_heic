@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "nrzhangsan/heic/hevc/residual"
+package "PaiGack/heic/hevc/residual"
 
 import {
-  "nrzhangsan/heic/hevc/cabac",
+  "PaiGack/heic/hevc/cabac",
 }
 
 // Values
