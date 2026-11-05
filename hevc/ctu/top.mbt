@@ -6,12 +6,12 @@
 // single-block reconstruction) is already byte-exact checked against the
 // upstream Go; this package is what finally wires them into a whole picture.
 //
-// Scope is locked to the M3 deliverable: I slices only, Main 8-bit 4:2:0,
-// single thread, single slice, single tile, no WPP, no PCM, no SAO, no
-// transform skip, no scaling lists, no transquant bypass. A stream that
-// switches any of these on is refused with Err rather than decoded into
-// plausible-looking but wrong pixels -- the loop reads no bin it cannot
-// account for, so a rejected tool never desynchronises the arithmetic
+// Scope: I slices only, Main 8-bit 4:2:0, single thread, single slice,
+// single tile, no WPP. Every other Main-profile tool is implemented here:
+// SAO syntax (7.3.8.3, with merge), PCM (7.3.8.7), cu_transquant_bypass,
+// and the reconstruction config carries scaling lists / transform skip.
+// Tiles and WPP are refused by the decode layer before any bin is read; a
+// stream outside the accepted framing never desynchronises the arithmetic
 // decoder.
 //
 // Sizes are Int32 where they index a plane (a CTB is at most 64x64 in Main),
@@ -69,9 +69,26 @@ pub(all) struct CtuParams {
   chroma_qp_offset_list_len : Int32
   cb_qp_offset_list : Array[Int32]
   cr_qp_offset_list : Array[Int32]
-  /// log2_sao_offset_scale for SAO (unused: SAO is refused).
+  /// SAO slice flags (7.3.8.3); the CTB loop parses one SAO syntax per CTB.
   sao_luma : Bool
   sao_chroma : Bool
+  /// log2_sao_offset_scale_luma / _chroma of the PPS (7.4.9.3).
+  sao_scale_luma : Int32
+  sao_scale_chroma : Int32
+  /// `cu_transquant_bypass_enabled_flag` of the PPS; one bypass bin per CU.
+  transquant_bypass_enabled : Bool
+  /// `pcm_enabled_flag` and the PCM block-size / bit-depth bounds (SPS).
+  pcm_enabled : Bool
+  log2_min_pcm_cb : Int32
+  log2_max_pcm_cb : Int32
+  pcm_bit_depth_luma : Int32
+  pcm_bit_depth_chroma : Int32
+  pcm_loop_filter_disabled : Bool
+  /// Number of CTBs across / down the picture (for SAO merge neighbours).
+  ctbs_w : Int32
+  ctbs_h : Int32
+  /// Slice segment address (in CTBs) for SAO merge availability.
+  slice_addr_rs : Int32
 }
 
 ///|
@@ -245,6 +262,10 @@ priv struct CtuState {
   mut cu_off_cr : Int32
   /// Current CU's intra flag (always true for an I slice).
   mut cur_intra : Bool
+  /// Per-CTB, per-component SAO parameters (7.3.8.3), one entry per CTB.
+  sao : Array[Array[@syntax.SaoParams]]
+  /// `cu_transquant_bypass_flag` of the current coding unit.
+  mut bypass : Bool
 }
 
 ///|
@@ -555,7 +576,7 @@ fn reconstruct_tb(
   }
   let stride = if c_idx == 0 { st.planes.stride_y } else { st.planes.stride_c }
   match
-    @reconstruct.reconstruct_block(
+    @reconstruct.reconstruct_block_full(
       st.geom,
       plane,
       stride,
@@ -568,6 +589,7 @@ fn reconstruct_tb(
       st.dec,
       cbf,
       st.config,
+      st.bypass,
     ) {
     Ok(_) => Ok(())
     Err(_) => Err(BadReconstruct)
@@ -790,8 +812,30 @@ fn coding_unit(
   let size = 1 << log2_size
   fill(st, st.cu_depth, x, y, size, depth)
 
-  // transquant_bypass_enabled is an UnsupportedTool; the loop must not
-  // consume a bin for it. The decode layer refuses such a PPS up front.
+  // 7.3.8.5: cu_transquant_bypass_flag, read once per coding unit when the
+  // PPS enables the tool. A bypassed CU carries its coefficients as the
+  // residual with no scaling and no transform (8.6.2), and its samples are
+  // excluded from the loop filters.
+  st.bypass = false
+  if st.params.transquant_bypass_enabled {
+    let b = match bin(st.dec, @syntax.ctx_cu_transquant_bypass_flag) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+    st.bypass = b != 0
+    if st.bypass {
+      let (nw, nh) = deblock_blocks_in(st, x, y, size, size)
+      for j in 0..<nh {
+        let row = ((y >> 2) + j) * st.deblock.mv_w + (x >> 2)
+        for i in 0..<nw {
+          let idx = row + i
+          if idx >= 0 && idx < st.deblock.no_filter.length() {
+            st.deblock.no_filter[idx] = true
+          }
+        }
+      }
+    }
+  }
 
   // I slice: no cu_skip_flag, pred_mode is implicitly intra.
   st.cur_intra = true
@@ -812,6 +856,32 @@ fn coding_unit(
   }
   if part_mode != 0 && part_mode != 3 {
     return Err(UnsupportedTool)
+  }
+
+  // 7.3.8.7: pcm_flag is a terminate bin, present only when the PCM tool is
+  // on and the CU size falls inside the SPS bounds and part_mode is 2Nx2N.
+  if st.params.pcm_enabled &&
+    log2_size >= st.params.log2_min_pcm_cb &&
+    log2_size <= st.params.log2_max_pcm_cb &&
+    part_mode == 0 {
+    if st.dec.decode_terminate() != 0 {
+      match pcm_sample(st, x, y, log2_size) {
+        Ok(new_off) => {
+          // Restart the arithmetic decoder at the byte after the PCM samples,
+          // keeping the context states (upstream cabac.init does the same).
+          st.dec.restart_at(new_off) catch {
+            _ => return Err(BadBin)
+          }
+          // 8.6.1: qPY_PREV carries the CU's QP to the next quantisation
+          // group even for a PCM CU; the CU's own QP is unchanged.
+          fill(st, st.qp_y, x, y, size, st.qp_y_cur)
+          set_deblock_qp(st, x, y, size)
+          st.qp_y_prev = st.qp_y_cur
+          return Ok(())
+        }
+        Err(e) => return Err(e)
+      }
+    }
   }
 
   let parts = if part_mode == 3 { 4 } else { 1 }
@@ -921,6 +991,155 @@ fn coding_quadtree(
 }
 
 ///|
+/// The frame-level state the CTU walk hands back: the 8.7.2 deblocking
+/// boundary state plus the per-CTB, per-component SAO parameters of 7.3.8.3
+/// (one @syntax.SaoParams for each of Y, Cb, Cr). SAO is applied by the
+/// decode layer after deblocking, reading the reconstructed picture as the
+/// filter left it.
+pub(all) struct CtuFrameState {
+  deblock : DeblockState
+  sao : Array[Array[@syntax.SaoParams]]
+}
+
+///|
+/// 7.3.8.3 SAO for one CTB. Single tile: rsToTs is the identity, so the
+/// merge-left / merge-up availability reduces to a raster-order check inside
+/// the slice segment. The merge bins are read through the same CABAC decoder
+/// as the quadtree, and the per-component syntax through the byte-exact
+/// checked @syntax.decode_sao.
+fn parse_sao_ctb(st : CtuState, rs : Int32) -> Result[Unit, CtuError] {
+  let w = st.params.ctbs_w
+  let left_avail = rs % w > 0 && rs - 1 >= st.params.slice_addr_rs
+  let up_avail = rs >= w && rs - w >= st.params.slice_addr_rs
+  let mut merge_left = false
+  let mut merge_up = false
+  if left_avail {
+    let b = match bin(st.dec, @syntax.ctx_sao_merge_flag) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+    merge_left = b != 0
+  }
+  if !merge_left && up_avail {
+    let b = match bin(st.dec, @syntax.ctx_sao_merge_flag) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+    merge_up = b != 0
+  }
+  if merge_left {
+    st.sao[rs] = st.sao[rs - 1]
+    return Ok(())
+  }
+  if merge_up {
+    st.sao[rs] = st.sao[rs - w]
+    return Ok(())
+  }
+  let p = match
+    @syntax.decode_sao(
+      st.dec,
+      8,
+      st.params.sao_scale_luma,
+      st.params.sao_scale_chroma,
+      st.params.sao_luma,
+      st.params.sao_chroma,
+    ) {
+    Ok(v) => v
+    Err(_) => return Err(BadBin)
+  }
+  st.sao[rs] = p
+  Ok(())
+}
+
+///|
+/// 7.3.8.7 / 8.4.4.1 PCM samples: read from the byte-aligned bitstream at
+/// the arithmetic decoder's pcmOffset, then restart the arithmetic decoder
+/// there. `cIdx` planes are written directly with no prediction/residual.
+/// Returns the byte offset the CABAC decoder must restart at, or Err.
+fn pcm_sample(
+  st : CtuState,
+  x : Int32,
+  y : Int32,
+  log2_size : Int32,
+) -> Result[Int32, CtuError] {
+  let off = st.dec.pcm_offset()
+  let data = st.dec.data
+  if off < 0 || off >= data.length() {
+    return Err(BadBin)
+  }
+  let size = 1 << log2_size
+  let depth_y = st.params.pcm_bit_depth_luma
+  let depth_c = st.params.pcm_bit_depth_chroma
+  // MSB-first bit reader over the bytes from off.
+  let mut bit_pos = 0
+  let read_bits = fn(n : Int32) -> Int32 {
+    let mut v = 0
+    for _ in 0..<n {
+      let byte = off + bit_pos / 8
+      if byte >= data.length() {
+        return -1
+      }
+      let shift = 7 - bit_pos % 8
+      v = (v << 1) | ((data[byte].to_int() >> shift) & 1)
+      bit_pos += 1
+    }
+    v
+  }
+  let scale_y = 8 - depth_y
+  let scale_c = 8 - depth_c
+  for j in 0..<size {
+    for i in 0..<size {
+      let v = read_bits(depth_y)
+      if v < 0 {
+        return Err(BadBin)
+      }
+      let idx = (y + j) * st.planes.stride_y + x + i
+      if idx >= 0 && idx < st.planes.y.length() {
+        st.planes.y[idx] = v << scale_y
+      }
+    }
+  }
+  let sw = 2
+  let sh = 2
+  let cs = size / 2
+  for c_idx in 1..<3 {
+    let plane = if c_idx == 1 { st.planes.cb } else { st.planes.cr }
+    for j in 0..<cs {
+      for i in 0..<cs {
+        let v = read_bits(depth_c)
+        if v < 0 {
+          return Err(BadBin)
+        }
+        let idx = (y / sh + j) * st.planes.stride_c + x / sw + i
+        if idx >= 0 && idx < plane.length() {
+          plane[idx] = v << scale_c
+        }
+      }
+    }
+  }
+  // Mark the covered blocks as intra / PU / TU edges with no coefficients,
+  // exactly as upstream markPU / markTU / setQP do for a PCM CU.
+  fill(st, st.intra_mode, x, y, size, @syntax.intra_dc)
+  mark_pu(st, x, y, size, true)
+  mark_tu(st, x, y, size, false)
+  set_deblock_qp(st, x, y, size)
+  if st.params.pcm_loop_filter_disabled {
+    let (nw, nh) = deblock_blocks_in(st, x, y, size, size)
+    for j in 0..<nh {
+      let row = ((y >> 2) + j) * st.deblock.mv_w + (x >> 2)
+      for i in 0..<nw {
+        let idx = row + i
+        if idx >= 0 && idx < st.deblock.no_filter.length() {
+          st.deblock.no_filter[idx] = true
+        }
+      }
+    }
+  }
+  // Byte-align the arithmetic decoder restart offset.
+  Ok(off + (bit_pos + 7) / 8)
+}
+
+///|
 /// Reconstruct one whole I picture's CTU layer into `planes`. The CABAC
 /// decoder must already be initialised at the slice data and its contexts
 /// seeded for the slice QP/type. CTBs are visited in raster order (single
@@ -936,9 +1155,18 @@ pub fn decode_ctu_frame(
   params : CtuParams,
   planes : CtuPlanes,
   config : @reconstruct.ReconConfig,
-) -> Result[DeblockState, CtuError] {
+) -> Result[CtuFrameState, CtuError] {
   let n_tb = geom.min_tb_w * geom.min_tb_h
   let deblock = new_deblock_state(params.width, params.height)
+  let ctbs_w = (params.width + (1 << params.ctb_log2) - 1) /
+    (1 << params.ctb_log2)
+  let ctbs_h = (params.height + (1 << params.ctb_log2) - 1) /
+    (1 << params.ctb_log2)
+  let sao : Array[Array[@syntax.SaoParams]] = Array::make(ctbs_w * ctbs_h, [
+    { type_idx: 0, offset: [0, 0, 0, 0], band: 0, class_: 0, },
+    { type_idx: 0, offset: [0, 0, 0, 0], band: 0, class_: 0, },
+    { type_idx: 0, offset: [0, 0, 0, 0], band: 0, class_: 0, },
+  ])
   let st : CtuState = {
     dec,
     geom,
@@ -958,24 +1186,32 @@ pub fn decode_ctu_frame(
     cu_off_cb: 0,
     cu_off_cr: 0,
     cur_intra: true,
+    sao,
+    bypass: false,
   }
   let ctb = 1 << params.ctb_log2
-  let ctbs_w = (params.width + ctb - 1) / ctb
-  let ctbs_h = (params.height + ctb - 1) / ctb
   for cy in 0..<ctbs_h {
     for cx in 0..<ctbs_w {
       let x = cx * ctb
       let y = cy * ctb
-      // SAO is refused by the decode layer; no bin is read here.
+      let rs = cy * ctbs_w + cx
+      // 7.3.8.2: SAO syntax precedes the quadtree for each CTB.
+      if params.sao_luma || params.sao_chroma {
+        match parse_sao_ctb(st, rs) {
+          Ok(_) => ()
+          Err(e) => return Err(e)
+        }
+      }
       match coding_quadtree(st, x, y, params.ctb_log2, 0) {
         Ok(_) => ()
         Err(e) => return Err(e)
       }
-      // 7.3.8.1 end_of_slice_segment_flag via decodeTerminate.
-      if dec.decode_terminate() != 0 {
-        return Ok(st.deblock)
+      // 7.3.8.1 end_of_slice_segment_flag via decodeTerminate. Use st.dec
+      // (not the outer binding) so a PCM restart stays in step.
+      if st.dec.decode_terminate() != 0 {
+        return Ok({ deblock: st.deblock, sao: st.sao, })
       }
     }
   }
-  Ok(st.deblock)
+  Ok({ deblock: st.deblock, sao: st.sao, })
 }

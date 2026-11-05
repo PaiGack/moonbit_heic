@@ -98,6 +98,18 @@
             # fingerprints, changed-sample count and block-state invariants.
             - node tools/gen_deblock_golden.mjs --check
             - node tools/crosscheck_deblock.mjs
+            # Remaining M3 tools: SAO (syntax + genuinely-active application),
+            # scaling lists, PCM, transform skip, transquant bypass,
+            # cu_chroma_qp_offset, plus 720p/1080p/4032x3024 scale checks.
+            # Real upstream Go decoder first-picture YUV; crosscheck re-derives
+            # every fingerprint / checksum / probe independently (no Go/network).
+            - node tools/gen_frame2_golden.mjs --check
+            - node tools/crosscheck_frame2.mjs
+            # 7.4.5 scaling-list factors: real upstream Go sps.scalingList +
+            # factors(), crosscheck re-derives all 16384 values from an
+            # independent JS transcription.
+            - node tools/gen_scaling_golden.mjs --check
+            - node tools/crosscheck_scaling.mjs
 
   pull_request:
     - <<: *moonbit
@@ -184,3 +196,15 @@
             # fingerprints, changed-sample count and block-state invariants.
             - node tools/gen_deblock_golden.mjs --check
             - node tools/crosscheck_deblock.mjs
+            # Remaining M3 tools: SAO (syntax + genuinely-active application),
+            # scaling lists, PCM, transform skip, transquant bypass,
+            # cu_chroma_qp_offset, plus 720p/1080p/4032x3024 scale checks.
+            # Real upstream Go decoder first-picture YUV; crosscheck re-derives
+            # every fingerprint / checksum / probe independently (no Go/network).
+            - node tools/gen_frame2_golden.mjs --check
+            - node tools/crosscheck_frame2.mjs
+            # 7.4.5 scaling-list factors: real upstream Go sps.scalingList +
+            # factors(), crosscheck re-derives all 16384 values from an
+            # independent JS transcription.
+            - node tools/gen_scaling_golden.mjs --check
+            - node tools/crosscheck_scaling.mjs

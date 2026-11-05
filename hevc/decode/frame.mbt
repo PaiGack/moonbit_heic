@@ -1,8 +1,8 @@
-// The picture buffer and the top-level decode entry point of M3. The
-// arithmetic that sizes the planes is real and audited (see FrameBuffer); the
-// reconstruction chain that fills them is not part of this increment, and
-// decode_i_frame says so with an explicit error rather than returning a
-// plausible-looking buffer of zeros or trapping on a malformed stream.
+// The picture buffer and the top-level decode entry point of M3. Plane sizes
+// come from FrameBuffer's audited Int64 arithmetic; decode_i_frame drives the
+// full CTU reconstruction chain plus frame-level deblocking and SAO, and
+// returns an explicit DecodeError instead of ever trapping on a malformed
+// stream or fabricating pixels.
 
 ///|
 /// Why a frame could not be decoded. Every case is a stream the port refuses
@@ -16,10 +16,9 @@ pub(all) enum DecodeError {
   NotISlice
   /// The plane size does not fit the Int an allocation is indexed with.
   TooLarge
-  /// The stream uses a coding tool or framing this I-frame increment does
-  /// not support yet (multi-slice, dependent slice, entry points, SAO, PCM,
-  /// scaling lists, transform skip, transquant bypass, tiles, WPP). The
-  /// CTU loop itself is wired for the accepted subset.
+  /// Framing this single-thread I-frame port does not implement: multi-slice
+  /// stitching, dependent slice segments, entry points, tiles and WPP. Every
+  /// other Main-profile coding tool is wired and byte-exact checked.
   NotImplemented
 }
 
@@ -86,16 +85,16 @@ pub fn alloc_frame(sps : @hevc.SPS) -> Result[Yuv420p8, DecodeError] {
 /// `hevc/geometry` and `hevc/reconstruct`. The working planes are Int32
 /// samples and are copied into the returned `Yuv420p8` bytes at the end.
 ///
-/// Scope is deliberately narrow: a single slice, single tile, no WPP, no SAO,
-/// no PCM, no scaling lists, no transform skip and no transquant bypass.
-/// `ctu_frame_input` derives those switches and refuses a stream that enables
-/// one; multi-slice streams are refused too, since each slice is its own
-/// CABAC substream. Frame-level deblocking (8.7.2) is wired: the CTU walk
-/// records the real TU/PU boundary state and `deblock_frame` filters the
-/// reconstructed picture before it is copied into the returned bytes. SAO is
-/// still refused. A malformed bin or a bad geometry returns `DecodeError`
-/// rather than reaching an unchecked array index, so a corrupt stream never
-/// traps.
+/// Scope: a single slice, single tile, no WPP (the Issue's single-thread
+/// lock). Every other Main-profile tool is wired: SAO (7.3.8.3 / 8.7.3),
+/// scaling lists (7.4.5 / 8.6.3), PCM (7.3.8.7), transform skip, transquant
+/// bypass and cu_chroma_qp_offset. `ctu_frame_input` derives those switches;
+/// tiles/WPP streams are refused. Frame-level deblocking (8.7.2) and SAO
+/// (8.7.3) are both wired: the CTU walk records the real TU/PU boundary state
+/// and per-CTB SAO parameters, `deblock_frame` then `sao_frame_components`
+/// filter the reconstructed picture before it is copied into the returned
+/// bytes. A malformed bin or a bad geometry returns `DecodeError` rather than
+/// reaching an unchecked array index, so a corrupt stream never traps.
 ///
 pub fn decode_i_frame(
   sps : @hevc.SPS,
@@ -158,11 +157,12 @@ pub fn decode_i_frame(
       _ => return Err(TooLarge)
     },
   }
-  let deblock = match
+  let state = match
     @ctu.decode_ctu_frame(dec, input.geom, input.params, planes, input.config) {
     Ok(state) => state
     Err(_) => return Err(InvalidStream)
   }
+  let deblock = state.deblock
   // 8.7.2 frame-level deblocking: the CTU walk recorded the real 4x4-raster
   // TU/PU boundaries, per-block QP and noFilter, so filter exactly the edges
   // the upstream deblock() filters. The pure kernels behind deblock_frame are
@@ -196,6 +196,34 @@ pub fn decode_i_frame(
       lf.beta_off_div2,
       lf.tc_off_div2,
       lf.deblocking_disabled,
+    ) {
+    Ok(_) => ()
+    Err(_) => return Err(InvalidStream)
+  }
+  // 8.7.3 SAO: the CTU walk parsed one 7.3.8.3 syntax per CTB (three
+  // component parameter sets). Convert the syntax-layer params into the
+  // loop-filter shape and apply them over the deblocked picture. The source
+  // copy inside sao_frame reads the exact pixels deblocking left.
+  let sao : Array[Array[@loopfilter.SaoParams]] = []
+  for ctb in state.sao {
+    let comps : Array[@loopfilter.SaoParams] = []
+    for p in ctb {
+      comps.push({
+        type_idx: p.type_idx,
+        class: p.class_,
+        band: p.band,
+        offset: p.offset,
+      })
+    }
+    sao.push(comps)
+  }
+  match
+    @loopfilter.sao_frame_components(
+      { y: luma, cb: chroma, cr: chroma2, },
+      fst,
+      sao,
+      input.sao_luma,
+      input.sao_chroma,
     ) {
     Ok(_) => ()
     Err(_) => return Err(InvalidStream)

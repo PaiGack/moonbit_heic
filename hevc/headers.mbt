@@ -82,12 +82,15 @@ pub fn default_scaling_list() -> ScalingList {
   for _ in 0..<max_scaling_list_sizes {
     let mats = []
     for _ in 0..<max_scaling_list_mats {
-      mats.push(Array::make(16, 16))
+      // [64]uint8 upstream: the 4x4 list only uses the first 16, but every
+      // matrix is a full 64-entry array so 8x8 parsing can index it safely.
+      mats.push(Array::make(64, 16))
     }
     sl.push(mats)
   }
   for _ in 0..<2 {
-    dc.push(Array::make(16, max_scaling_list_mats))
+    // dc[size_id-2][matrix_id], i.e. 2 rows of 6 entries, flat value 16.
+    dc.push(Array::make(max_scaling_list_mats, 16))
   }
   for s in 1..<max_scaling_list_sizes {
     for m in 0..<max_scaling_list_mats {

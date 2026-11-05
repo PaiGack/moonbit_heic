@@ -60,6 +60,10 @@ pub let ctx_split_coding_unit_flag : Int32 = 2
 pub let ctx_cu_qp_delta : Int32 = 9
 
 ///|
+/// `cu_transquant_bypass_flag` context of 9.3.2.2 (Table 9-4).
+pub let ctx_cu_transquant_bypass_flag : Int32 = 5
+
+///|
 pub let ctx_part_mode : Int32 = 13
 
 ///|

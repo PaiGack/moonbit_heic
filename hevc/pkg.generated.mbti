@@ -42,6 +42,10 @@ pub fn profile_tier_level_bytes(Bytes) -> Bytes?
 
 pub fn read_past_end(Bytes) -> Bool
 
+pub let scaling_cases : Array[ScalingCase]
+
+pub fn scaling_factor(Array[Array[ScalingFactors]], Int32, Int32, Bool, Bool, Bool) -> Array[Int32]?
+
 pub fn se_seq(Bytes, Int32) -> Array[Int32]
 
 pub fn split_annex_b(Bytes) -> Array[NALUnit]
@@ -275,10 +279,25 @@ pub(all) struct SPS {
 pub fn SPS::cropped_height(Self) -> Int32
 pub fn SPS::cropped_width(Self) -> Int32
 
+pub(all) struct ScalingCase {
+  name : String
+  sl : Array[Array[Array[Int32]]]
+  dc : Array[Array[Int32]]
+  factors : Array[Array[Array[Int32]]]
+}
+
+pub(all) struct ScalingFactors {
+  size_id : Int32
+  matrix_id : Int32
+  n : Int32
+  factor : Array[Int32]
+}
+
 pub(all) struct ScalingList {
   sl : Array[Array[Array[Int32]]]
   dc : Array[Array[Int32]]
 }
+pub fn ScalingList::factors(Self) -> Array[Array[ScalingFactors]]
 
 pub(all) struct ShortTermRPS {
   delta_poc_s0 : Array[Int32]

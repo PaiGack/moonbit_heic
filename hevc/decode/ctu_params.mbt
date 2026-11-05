@@ -1,24 +1,20 @@
 // The seam between the parsed headers (M2) and the CTU quadtree/TU/PU syntax
-// driver (hevc/ctu, M3). The loop needs a handful of per-picture geometry and
-// tool switches before it reads its first split bin; deriving them here is
-// where the decode path first hands a real I frame to the reconstruction
-// chain. A tool the single-thread I-frame loop does not implement is refused
-// explicitly, so a stream never desynchronises the CABAC decoder.
+// driver (hevc/ctu, M3). The loop needs the per-picture geometry and every
+// tool switch before it reads its first split bin; deriving them here is where
+// the decode path first hands a real I frame to the reconstruction chain.
+//
+// M3 accepts every coding tool that keeps a single slice, single tile and no
+// WPP: SAO (7.3.8.3 / 8.7.3), scaling lists (7.4.5 / 8.6.3), PCM (7.3.8.7),
+// transform skip, transquant bypass and cu_chroma_qp_offset. Tiles and WPP
+// are outside the Issue's single-thread scope and are refused explicitly, so
+// a stream never desynchronises the CABAC decoder.
 
 ///|
-/// The tools this increment of the CTU loop refuses, as a value the decode
-/// layer matches on. Keeping the list explicit makes it obvious what the
-/// next increment has to wire (SAO, PCM, transform skip, scaling lists,
-/// transquant bypass, tiles/WPP, multi-slice).
+/// The tools this port still refuses: tiles and wavefront parallel decoding,
+/// the two the Issue locks out with "single thread (give up WPP/tiles)".
 pub(all) enum UnsupportedCtuTool {
-  Sao
-  Pcm
-  TransformSkip
-  ScalingList
-  TransquantBypass
   Tiles
   Wpp
-  CuChromaQpOffset
 }
 
 ///|
@@ -31,42 +27,27 @@ pub(all) struct CtuFrameInput {
   config : @reconstruct.ReconConfig
   qp_y : Int32
   slice_data : Bytes
+  /// SAO slice flags, forwarded to the frame-level SAO pass.
+  sao_luma : Bool
+  sao_chroma : Bool
 }
 
 ///|
-/// Derives the CTU loop input, or the first unsupported tool the loop would
-/// need to consume a bin for. The order matters: a stream with SAO on reads
-/// SAO bins before the quadtree, so it cannot be decoded by silently
-/// skipping them.
+/// Derives the CTU loop input. Tiles/WPP are refused; every other Main-profile
+/// tool is wired and its per-picture switches are handed to the CTU loop and
+/// the reconstruction config. Scaling factors come from the PPS list when it
+/// is present, else the SPS list, else the flat default (empty table).
 pub fn ctu_frame_input(
   sps : @hevc.SPS,
   pps : @hevc.PPS,
   slice : @hevc.SliceHeader,
   nal_rbsp : Bytes,
 ) -> Result[CtuFrameInput, UnsupportedCtuTool] {
-  if sps.sao_enabled || slice.sao_luma || slice.sao_chroma {
-    return Err(Sao)
-  }
-  if sps.pcm_enabled {
-    return Err(Pcm)
-  }
-  if pps.transform_skip_enabled {
-    return Err(TransformSkip)
-  }
-  if sps.scaling_list_enabled || pps.scaling_list_present {
-    return Err(ScalingList)
-  }
-  if pps.transquant_bypass {
-    return Err(TransquantBypass)
-  }
   if pps.tiles_enabled {
     return Err(Tiles)
   }
   if pps.entropy_coding_sync {
     return Err(Wpp)
-  }
-  if pps.chroma_qp_offset_list {
-    return Err(CuChromaQpOffset)
   }
   let w = sps.pic_width_in_luma_samples
   let h = sps.pic_height_in_luma_samples
@@ -76,6 +57,32 @@ pub fn ctu_frame_input(
     sps.ctb_log2_size_y,
     sps.min_tb_log2_size_y,
   )
+  let ctb = 1 << sps.ctb_log2_size_y
+  let ctbs_w = (w + ctb - 1) / ctb
+  let ctbs_h = (h + ctb - 1) / ctb
+  let slice_addr_rs = @safe.narrow(slice.slice_segment_address) catch {
+    _ => return Err(Tiles)
+  }
+  // 7.4.5: the PPS overrides the SPS scaling list when it carries one.
+  let scaling_list = if pps.scaling_list_present {
+    pps.scaling_list
+  } else {
+    sps.scaling_list
+  }
+  let factors = if sps.scaling_list_enabled || pps.scaling_list_present {
+    let f = scaling_list.factors()
+    let flat : Array[Array[Array[Int32]]] = []
+    for s in f {
+      let mats : Array[Array[Int32]] = []
+      for m in s {
+        mats.push(m.factor)
+      }
+      flat.push(mats)
+    }
+    flat
+  } else {
+    []
+  }
   let params : @ctu.CtuParams = {
     width: w,
     height: h,
@@ -92,29 +99,55 @@ pub fn ctu_frame_input(
     sign_data_hiding: pps.sign_data_hiding_enabled,
     strong_intra_smoothing: sps.strong_intra_smoothing,
     intra_smoothing_disabled: sps.intra_smoothing_disabled,
-    cu_chroma_qp_offset: false,
-    chroma_qp_offset_list_len: 1,
-    cb_qp_offset_list: [0],
-    cr_qp_offset_list: [0],
-    sao_luma: false,
-    sao_chroma: false,
+    cu_chroma_qp_offset: pps.chroma_qp_offset_list,
+    chroma_qp_offset_list_len: pps.chroma_qp_offset_list_len,
+    cb_qp_offset_list: pps.cb_qp_offset_list,
+    cr_qp_offset_list: pps.cr_qp_offset_list,
+    sao_luma: slice.sao_luma,
+    sao_chroma: slice.sao_chroma,
+    sao_scale_luma: pps.log2_sao_offset_scale_luma,
+    sao_scale_chroma: pps.log2_sao_offset_scale_chroma,
+    transquant_bypass_enabled: pps.transquant_bypass,
+    pcm_enabled: sps.pcm_enabled,
+    log2_min_pcm_cb: sps.log2_min_pcm_cb_size,
+    log2_max_pcm_cb: sps.log2_max_pcm_cb_size,
+    pcm_bit_depth_luma: sps.pcm_bit_depth_luma,
+    pcm_bit_depth_chroma: sps.pcm_bit_depth_chroma,
+    pcm_loop_filter_disabled: sps.pcm_loop_filter_disabled,
+    ctbs_w,
+    ctbs_h,
+    slice_addr_rs,
   }
   let config : @reconstruct.ReconConfig = {
     sign_data_hiding: pps.sign_data_hiding_enabled,
     strong_intra_smoothing: sps.strong_intra_smoothing,
     intra_smoothing_disabled: sps.intra_smoothing_disabled,
-    transquant_bypass: false,
-    max_transform_skip_size: 0,
+    transquant_bypass: pps.transquant_bypass,
+    max_transform_skip_size: pps.log2_max_transform_skip_size,
+    scaling: factors,
+    scaling_enabled: sps.scaling_list_enabled || pps.scaling_list_present,
+    transquant_bypass_enabled: pps.transquant_bypass,
+    transform_skip_rotation: sps.transform_skip_rotation,
+    transform_skip_enabled: pps.transform_skip_enabled,
+    transform_skip_context: sps.transform_skip_context,
   }
   // data_offset is a byte index into the RBSP; the CABAC decoder reads from
   // there to the end of the NAL. A short slice is caught by Decoder::new.
   let off = @safe.narrow(slice.data_offset) catch {
-    _ => return Err(ScalingList) // oversized offset is not a valid stream
+    _ => return Err(Tiles) // oversized offset is not a valid stream
   }
   let slice_data = if off < nal_rbsp.length() {
     nal_rbsp.exact_view(start=off, end=nal_rbsp.length()).to_owned()
   } else {
     b""
   }
-  Ok({ params, geom, config, qp_y: slice.qp_y, slice_data, })
+  Ok({
+    params,
+    geom,
+    config,
+    qp_y: slice.qp_y,
+    slice_data,
+    sao_luma: slice.sao_luma,
+    sao_chroma: slice.sao_chroma,
+  })
 }
