@@ -1,0 +1,194 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/syntax"
+
+import {
+  "nrzhangsan/heic/hevc/cabac",
+}
+
+// Values
+pub let bin_cases : Array[BinCase]
+
+pub fn cbf_cbcr_ctx(Int32) -> Int32
+
+pub fn cbf_luma_ctx(Int32) -> Int32
+
+pub fn chroma422(Int32) -> Result[Int32, SyntaxError]
+
+pub let chroma422_want : Array[Int32]
+
+pub let chroma_cases : Array[ChromaCase]
+
+pub fn chroma_qp(Int32, Int32) -> Int32
+
+pub let chroma_qp_want : Array[Int32]
+
+pub let cqo_cases : Array[CqoCase]
+
+pub let ctx_cbf_cbcr : Int32
+
+pub let ctx_cbf_luma : Int32
+
+pub let ctx_cu_chroma_qp_offset_flag : Int32
+
+pub let ctx_cu_chroma_qp_offset_idx : Int32
+
+pub let ctx_cu_qp_delta : Int32
+
+pub let ctx_idx_cases : Array[CtxIdxCase]
+
+pub let ctx_intra_chroma_pred_mode : Int32
+
+pub let ctx_part_mode : Int32
+
+pub let ctx_prev_intra_luma_pred_flag : Int32
+
+pub let ctx_sao_merge_flag : Int32
+
+pub let ctx_sao_type_idx : Int32
+
+pub let ctx_split_coding_unit_flag : Int32
+
+pub let ctx_split_transform_flag : Int32
+
+pub fn decode_cu_chroma_qp_offset(@cabac.Decoder, Int32, Array[Int32], Array[Int32]) -> Result[(Int32, Int32), SyntaxError]
+
+pub fn decode_cu_qp_delta(@cabac.Decoder) -> Result[Int32, SyntaxError]
+
+pub fn decode_flag(@cabac.Decoder, Int32) -> Result[Int32, SyntaxError]
+
+pub fn decode_intra_chroma_mode(@cabac.Decoder, Int32, Int32) -> Result[Int32, SyntaxError]
+
+pub fn decode_intra_luma_mode(@cabac.Decoder, Array[Int32]) -> Result[Int32, SyntaxError]
+
+pub fn decode_part_mode_intra(@cabac.Decoder) -> Result[Int32, SyntaxError]
+
+pub fn decode_sao(@cabac.Decoder, Int32, Int32, Int32, Bool, Bool) -> Result[Array[SaoParams], SyntaxError]
+
+pub let intra_dc : Int32
+
+pub let intra_hor : Int32
+
+pub let intra_planar : Int32
+
+pub let intra_ver : Int32
+
+pub let luma_cases : Array[LumaCase]
+
+pub fn mpm_cand(Int32, Int32) -> Array[Int32]
+
+pub let mpm_cases : Array[MpmCase]
+
+pub let part_cases : Array[PartCase]
+
+pub fn qp_wrap(Int32, Int32, Int32) -> Int32
+
+pub let qp_wrap_cases : Array[QpWrapCase]
+
+pub let qpd_cases : Array[QpdCase]
+
+pub let sao_cases : Array[SaoCase]
+
+pub let sao_cmax_cases : Array[CMaxCase]
+
+pub fn sao_offset_cmax(Int32) -> Int32
+
+pub fn split_cu_ctx(Int32, Int32, Int32) -> Int32
+
+pub let split_cu_ctx_cases : Array[SplitCuCtxCase]
+
+pub fn split_tf_ctx(Int32) -> Int32
+
+// Errors
+
+// Types and methods
+pub(all) struct BinCase {
+  ctx : Int32
+  bytes : Bytes
+  want : Int32
+}
+
+pub(all) struct CMaxCase {
+  bit_depth : Int32
+  want : Int32
+}
+
+pub(all) struct ChromaCase {
+  luma : Int32
+  bytes : Bytes
+  want : Int32
+}
+
+pub(all) struct CqoCase {
+  len : Int32
+  cb_list : Array[Int32]
+  cr_list : Array[Int32]
+  bytes : Bytes
+  want_cb : Int32
+  want_cr : Int32
+}
+
+pub(all) struct CtxIdxCase {
+  kind : Int32
+  arg : Int32
+  want : Int32
+}
+
+pub(all) struct LumaCase {
+  cand : Array[Int32]
+  mode : Int32
+  bytes : Bytes
+  want : Int32
+}
+
+pub(all) struct MpmCase {
+  a : Int32
+  b : Int32
+  want : Array[Int32]
+}
+
+pub(all) struct PartCase {
+  bytes : Bytes
+  want : Int32
+}
+
+pub(all) struct QpWrapCase {
+  pred : Int32
+  delta : Int32
+  want : Int32
+}
+
+pub(all) struct QpdCase {
+  bytes : Bytes
+  want : Int32
+}
+
+pub(all) struct SaoCase {
+  bytes : Bytes
+  types : Array[Int32]
+  offs : Array[Array[Int32]]
+  bands : Array[Int32]
+  classes : Array[Int32]
+}
+
+pub(all) struct SaoParams {
+  type_idx : Int32
+  offset : Array[Int32]
+  band : Int32
+  class_ : Int32
+}
+
+pub(all) struct SplitCuCtxCase {
+  left_depth : Int32
+  above_depth : Int32
+  depth : Int32
+  want : Int32
+}
+
+pub(all) enum SyntaxError {
+  BadBin
+  InvalidParam
+}
+
+// Type aliases
+
+// Traits

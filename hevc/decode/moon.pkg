@@ -3,12 +3,14 @@ import {
   "nrzhangsan/heic/hevc",
   "nrzhangsan/heic/hevc/recon",
   "nrzhangsan/heic/hevc/loopfilter",
+  "nrzhangsan/heic/hevc/syntax",
 }
 
 import {
   "nrzhangsan/heic/hevc/decode",
   "nrzhangsan/heic/hevc/recon",
   "nrzhangsan/heic/hevc/loopfilter",
+  "nrzhangsan/heic/hevc/syntax",
 } for "test"
 
 pkgtype(kind: "library")

@@ -191,3 +191,31 @@ test "loop_filter_params honours the slice beta/tc offsets" {
   assert_eq(lf.bs2_beta, @loopfilter.beta_tc(30, 2, 6, -6, 8).beta)
   assert_eq(lf.bs2_tc, @loopfilter.beta_tc(30, 2, 6, -6, 8).tc)
 }
+
+///|
+test "syntax_params derives CTU syntax switches through the verified kernels" {
+  let au = idr_au()
+  let h = au.slices[0].header
+  let sy = @decode.syntax_params(au.sps, au.pps, h)
+  // The switches are pure copies of the parameter sets.
+  assert_eq(sy.cu_qp_delta_enabled, au.pps.cu_qp_delta_enabled)
+  assert_eq(sy.cu_chroma_qp_offset_enabled, au.pps.chroma_qp_offset_list)
+  assert_eq(sy.chroma_qp_offset_list_len, au.pps.chroma_qp_offset_list_len)
+  assert_eq(sy.sao_scale_luma, au.pps.log2_sao_offset_scale_luma)
+  assert_eq(sy.sao_scale_chroma, au.pps.log2_sao_offset_scale_chroma)
+  assert_eq(sy.sign_data_hiding, au.pps.sign_data_hiding_enabled)
+  assert_eq(sy.transform_skip_enabled, au.pps.transform_skip_enabled)
+  assert_eq(sy.min_tb_log2, au.sps.min_tb_log2_size_y)
+  assert_eq(sy.max_tb_log2, au.sps.max_tb_log2_size_y)
+  // The context indices and the QP wrap come from the byte-exact checked
+  // hevc/syntax kernels, so the decode path cannot disagree with the CTU loop.
+  assert_eq(
+    sy.root_split_tf_ctx,
+    @syntax.split_tf_ctx(au.sps.max_tb_log2_size_y),
+  )
+  assert_eq(sy.cbf_luma_root_ctx, @syntax.cbf_luma_ctx(0))
+  assert_eq(sy.cbf_luma_nested_ctx, @syntax.cbf_luma_ctx(1))
+  assert_eq(sy.qp_y_wrapped, @syntax.qp_wrap(h.qp_y, 0, au.sps.bit_depth_luma))
+  // 8.6.1 with a zero delta is the identity for a valid SliceQpY (0..51).
+  assert_eq(sy.qp_y_wrapped, h.qp_y)
+}
