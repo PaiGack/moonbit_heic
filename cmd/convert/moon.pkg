@@ -1,0 +1,9 @@
+import {
+  "nrzhangsan/heic/heif",
+  "nrzhangsan/heic/hevc",
+  "nrzhangsan/heic/hevc/decode",
+  "nrzhangsan/heic/color",
+  "nrzhangsan/heic/image",
+  "nrzhangsan/heic/io/png",
+  "nrzhangsan/heic/io/jpeg",
+}

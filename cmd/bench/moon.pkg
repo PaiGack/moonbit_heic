@@ -1,0 +1,6 @@
+import {
+  "moonbitlang/core/env",
+  "nrzhangsan/heic/cmd/convert",
+}
+
+pkgtype(kind: "executable")

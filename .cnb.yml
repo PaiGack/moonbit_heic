@@ -114,6 +114,18 @@
             - node tools/gen_scaling_golden.mjs --check
             - node tools/crosscheck_scaling.mjs
 
+        # M5 end-to-end smoke: one 16x16 upstream-Go I frame, wrapped in a
+        # minimal HEIC, decoded by the MoonBit CLI and compared to an
+        # independent JS BT.709 reference (PSNR >= 45dB), plus the four
+        # documented exit codes. The bench fixture is checked for drift so a
+        # hand edit cannot make the backend timing report stale.
+        - name: m5 e2e smoke
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - node --test tools/e2e/
+            - node tools/e2e/gen_bench_fixture.mjs --check
+            - node tools/e2e/run.mjs --smoke --out tools/e2e/report.json
+
         # M4 end-to-end: a real M3 I-frame HEVC stream is wrapped in a minimal
         # HEIC, decoded through M1/M3, colour-converted and written as PNG
         # (8/16-bit) and JPEG. The self-test checks the emitted containers
@@ -223,6 +235,18 @@
             # independent JS transcription.
             - node tools/gen_scaling_golden.mjs --check
             - node tools/crosscheck_scaling.mjs
+        # M5 end-to-end smoke: one 16x16 upstream-Go I frame, wrapped in a
+        # minimal HEIC, decoded by the MoonBit CLI and compared to an
+        # independent JS BT.709 reference (PSNR >= 45dB), plus the four
+        # documented exit codes. The bench fixture is checked for drift so a
+        # hand edit cannot make the backend timing report stale.
+        - name: m5 e2e smoke
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - node --test tools/e2e/
+            - node tools/e2e/gen_bench_fixture.mjs --check
+            - node tools/e2e/run.mjs --smoke --out tools/e2e/report.json
+
         # M4 end-to-end: a real M3 I-frame HEVC stream is wrapped in a minimal
         # HEIC, decoded through M1/M3, colour-converted and written as PNG
         # (8/16-bit) and JPEG. The self-test checks the emitted containers

@@ -1,13 +1,9 @@
 ///|
-/// `heicinfo` — the M1 preview from the issue: one line per file, saying what
-/// the container holds, without decoding a single sample.
-///
-/// ```
-/// 4032x3024 | HEVC Main @ 8bit 4:2:0 | BT.709 | irot=90 | payload 1.2MB
-/// ```
-///
-/// A bad argument list aborts with status 2, an unreadable input with status
-/// 1; `--help` is status 0 and only prints usage.
+/// `heicinfo` — the M1 preview: one line per file, saying what the container
+/// holds, without decoding a single sample. Unreadable inputs fail with
+/// status 1; an unsupported brand is reported but does not stop the others.
+
+///|
 async fn main {
   let args = @env.args()
   let mut rest : Array[String] = []
@@ -16,20 +12,20 @@ async fn main {
   }
   match parse_args(rest) {
     Err(message) => {
-      write_err("heicinfo: \{message}\n\{usage()}")
-      @prelude.abort("usage")
+      @stdio.stderr.write(@utf8.encode("heicinfo: \{message}\n\{usage()}"))
+      @env.exit(1)
     }
-    Ok(None) => write_out(usage())
+    Ok(None) => @stdio.stdout.write(@utf8.encode(usage()))
     Ok(Some(paths)) => {
       let mut failed = false
       for path in paths {
         match report(path) {
-          Ok(line) => write_out(line + "\n")
+          Ok(line) => @stdio.stdout.write(@utf8.encode(line + "\n"))
           Err(_) => failed = true
         }
       }
       if failed {
-        @prelude.abort("input")
+        @env.exit(1)
       }
     }
   }
@@ -63,27 +59,33 @@ fn parse_args(args : Array[String]) -> Result[Array[String]?, String] {
 async fn report(path : String) -> Result[String, Unit] {
   let data = @fs.read_binary(path) catch {
     _ => {
-      write_err("heicinfo: cannot read \{path}\n")
+      @stdio.stderr.write(@utf8.encode("heicinfo: cannot read \{path}\n"))
       return Err(())
     }
   }
   let f = match @heif.parse(data) {
     Ok(f) => f
     Err(err) => {
-      write_err("heicinfo: \{path}: \{describe_error(err)}\n")
+      @stdio.stderr.write(
+        @utf8.encode("heicinfo: \{path}: \{describe_error(err)}\n"),
+      )
       return Err(())
     }
   }
   if !f.is_hevc() {
-    write_err(
-      "heicinfo: \{path}: brand '\{f.major_brand()}' is not a HEVC image\n",
+    @stdio.stderr.write(
+      @utf8.encode(
+        "heicinfo: \{path}: brand '\{f.major_brand()}' is not a HEVC image\n",
+      ),
     )
     return Err(())
   }
   let img = match f.primary_image() {
     Ok(img) => img
     Err(err) => {
-      write_err("heicinfo: \{path}: \{describe_error(err)}\n")
+      @stdio.stderr.write(
+        @utf8.encode("heicinfo: \{path}: \{describe_error(err)}\n"),
+      )
       return Err(())
     }
   }
@@ -91,12 +93,9 @@ async fn report(path : String) -> Result[String, Unit] {
 }
 
 ///|
-/// The one-line description of an item.
-///
-/// Everything the issue asks for is here, in the order a person reads it:
+/// The one-line description of an item, in the order a person reads it:
 /// size, codec and bit depth, colour, orientation, payload weight. The
-/// extras (`grid`, `alpha`, thumbnail) are appended only when they apply, so
-/// the common case stays one short line.
+/// extras (`grid`, `alpha`, aperture) are appended only when they apply.
 fn summarize(img : @heif.ImageItem) -> String {
   let sb = StringBuilder()
   sb.write_string("\{img.width}x\{img.height}")
@@ -139,7 +138,6 @@ fn summarize(img : @heif.ImageItem) -> String {
       sb.write_string(if axis == 0 { " | imir=0" } else { " | imir=1" })
   }
   if img.transform.angle != 0 {
-    // `irot` counts quarter turns anticlockwise.
     sb.write_string(" | irot=\{-img.transform.angle * 90}")
   }
 
@@ -161,12 +159,8 @@ fn summarize(img : @heif.ImageItem) -> String {
 }
 
 ///|
-/// The profile name the decoder configuration record names, `Main` and
-/// `Main 10` being the two a HEIC ever uses.
-///
-/// A grid item has no record of its own — `describe_item` fills the depth from
-/// its first tile — so the profile comes from the tile as well, and is simply
-/// unknown when there is none.
+/// The profile name the decoder configuration record names. A grid item has
+/// no record of its own, so the name is simply unknown when there is none.
 fn profile_name(img : @heif.ImageItem) -> String {
   let c = match img.hvc_c {
     None => return "HEVC"
@@ -224,14 +218,4 @@ fn describe_error(err : @heif.HeifError) -> String {
     Unsupported => "unsupported image"
     NoThumbnail => "no thumbnail"
   }
-}
-
-///|
-async fn write_out(text : String) -> Unit {
-  @stdio.stdout.write(@utf8.encode(text))
-}
-
-///|
-async fn write_err(text : String) -> Unit {
-  @stdio.stderr.write(@utf8.encode(text))
 }
