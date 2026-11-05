@@ -6,7 +6,6 @@ package "nrzhangsan/heic/cmd/heic2png"
 // Errors
 
 // Types and methods
-type Options
 
 // Type aliases
 

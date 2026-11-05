@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/cmd/cli"
+
+import {
+  "nrzhangsan/heic/cmd/convert",
+}
+
+// Values
+pub fn finish(Int32) -> Unit
+
+pub async fn run(@convert.Options) -> Int32
+
+pub async fn write_err(String) -> Unit
+
+pub async fn write_out(String) -> Unit
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

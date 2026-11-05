@@ -1,0 +1,56 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/cmd/convert"
+
+// Values
+pub fn convert(Bytes, Options) -> Result[Bytes, ConvertError]
+
+pub fn default_output(String, Format) -> String
+
+pub let exit_decode : Int32
+
+pub let exit_input : Int32
+
+pub let exit_ok : Int32
+
+pub let exit_unsupported : Int32
+
+pub fn is_heic_name(String) -> Bool
+
+pub fn parse_args(Array[String]) -> Result[Options, String]
+
+pub fn parse_format(String) -> Result[Format, String]
+
+pub fn usage() -> String
+
+// Errors
+
+// Types and methods
+pub(all) enum ConvertError {
+  Input(String)
+  Unsupported(String)
+  Decode(String)
+}
+pub fn ConvertError::exit_code(Self) -> Int32
+pub fn ConvertError::message(Self) -> String
+
+pub enum Format {
+  Png
+  Jpeg
+}
+pub fn Format::extension(Self) -> String
+pub fn Format::is_jpeg(Self) -> Bool
+
+pub struct Options {
+  inputs : Array[String]
+  output : String?
+  format : Format
+  quality : Int32
+  bit16 : Bool
+  jobs : Int32
+  help : Bool
+}
+pub fn Options::default() -> Self
+
+// Type aliases
+
+// Traits

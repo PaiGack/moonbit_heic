@@ -22,7 +22,7 @@ try {
   const run = (args) => execFileSync("moon", ["run", "cmd/heic2png", "--", ...args], { stdio: "pipe" });
   run([heic, png8]);
   run(["--16bit", heic, png16]);
-  run(["--jpeg", "--quality", "90", heic, jpg]);
+  run(["-f", "jpg", "-q", "90", heic, jpg]);
 
   const assert = (ok, msg) => { if (!ok) throw new Error(msg); };
   const checkPng = (path, bitDepth) => {

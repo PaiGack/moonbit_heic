@@ -5,7 +5,8 @@ MoonBit 移植自 [gen2brain/h265](https://github.com/gen2brain/h265)，
 
 当前进度：M0（工程骨架 + `safe/`）、M1（HEIF / ISOBMFF 容器）、
 M2（HEVC 头解析：NAL / AnnexB / hvcC 分帧、位读取、VPS / SPS / PPS、
-slice segment header）与 M4（色彩转换 + PNG/JPEG 输出）已完成。
+slice segment header）、M3（CABAC + 仅 I 帧解码）、M4（色彩转换 + PNG/JPEG
+输出）与 M5（CLI + 端到端验收）均已完成。
 所有字段与上游逐项对齐。M3 正自底向上
 分层落地：CABAC 算术解码器（179 上下文、Table 9-4/9-46/9-47 逐条对齐）、
 系数扫描表与逆变换基矩阵、反量化 / 2D 逆变换 / 35 种帧内预测（recon 层）、
@@ -129,9 +130,13 @@ color/             YUV→RGB、色域、transfer、alpha（M4 已实现）
 image/             irot/imir/clap 与 render 编排（M4 已实现）
 io/png/            PNG 8/16bit 编码、zlib、iCCP（M4 已实现）
 io/jpeg/           baseline JPEG、质量可调、APP2 ICC（M4 已实现）
+cmd/convert/       M5 纯逻辑：CLI 参数、错误分类、完整转码管线
+cmd/cli/           M5 进程胶水：文件/目录读写、批量并发、退出码
+cmd/bench/         四后端解码耗时驱动（内嵌固件，无 fs/stdio 依赖）
 cmd/heicinfo/      CLI：容器侦察（M1）
-cmd/heic2png/      CLI：M1→M3→M4 端到端出 PNG/JPEG（M4 已接通）
+cmd/heic2png/      CLI：M1→M3→M4 端到端出 PNG/JPEG（M5 已接通）
 tools/parity/      对拍脚本 + 固件
+tools/e2e/         M5 端到端验收：PSNR 报告、耗时曲线、CI 冒烟
 tools/build_m4_heic.mjs / m4_cli_selftest.mjs   M4 端到端自检
 ```
 
@@ -219,3 +224,148 @@ moon test
 moon info && moon fmt     # 提交前跑一遍
 node --test tools/parity/
 ```
+
+## M5：能真用起来的命令
+
+```bash
+heic2png photo.heic                       # → photo.png
+heic2png photo.heic -o out.png            # 指定输出
+heic2png -f jpg -q 90 photos/             # 目录批量，默认 4 任务并发
+heic2png --16bit photo.heic               # 16-bit PNG 容器
+heicinfo photo.heic                       # 元信息（M1 的预演命令）
+```
+
+MoonBit 里跑同一件事用 `moon run cmd/heic2png -- ...`、`moon run
+cmd/heicinfo -- ...`。退出码按 Issue 约定：**0 成功 / 1 输入不可读 /
+2 不支持的 profile / 3 解码失败**。错误一律打印到 stderr，不吞异常；
+`@env.exit` 是干净退出，不会甩一栈 wasm 调用栈。命令行写错、文件读不了、
+输出写不了都归 1；容器或码流声明了 10bit / 4:2:2 / 4:4:4 / Main 10 /
+grid / P·B 帧 / 多 slice / tiles / WPP 归 2；Main 8bit 4:2:0 I 帧解坏了归 3。
+
+`heic2png` 的目录批量用 `moonbitlang/core/async` 的 task group +
+semaphore 限并发（`-j N`，默认 4）：每个 `.heic`/`.heif` 独立出图，
+`-o` 只对单输入有效，最坏退出码作为进程状态。参数表、错误分类、退出码
+都在 `cmd/convert/`（`moon test` 里 248 条用例覆盖），进程胶水在
+`cmd/cli/`。
+
+## 端到端验收（`tools/e2e/`）
+
+```bash
+node tools/e2e/run.mjs --smoke            # CI 冒烟：1 张 16x16，native 单后端
+node tools/e2e/run.mjs                    # 全量：5 张固件 + 4 后端耗时
+node --test tools/e2e/                   # harness 自测（参考转换/PNG 解码/PSNR）
+```
+
+`tools/frame_golden.json` 里每个 case 都带**真实上游 Go 解码器**
+（`DecodeNAL + Flush`, `-tags noasm`）输出的 planar YUV。`build_case.mjs`
+把码流包成最小 HEIC，`run.mjs` 跑 MoonBit CLI 出 PNG，再拿一份**独立写的**
+JS BT.709 limited-range YUV→RGB（`reference.mjs`，不是待测的 MoonBit
+`color/` 代码）算出参考 RGBA，逐字节比 PSNR：确定性重建的帧是 `inf dB`
+（完全相等），带量化噪声的 `qp_small.h265` 实测 **47.26 dB**，均高于
+Issue 的 45 dB 线。报告里还带四后端 `convert()` 墙钟耗时与产物体积，
+写成 `tools/e2e/report.json`。CI 只跑 `--smoke`，不碰 4032×3024。
+
+`heif-convert` / libheif 与 iPhone 实拍 `.heic` 的比对是「外部对照」那
+条硬指标：本仓库的 CI 环境没有 libheif，也没有相机原图，所以 e2e 用
+**上游 Go 解码器的 planar YUV 当权威真值**做同等的逐像素 PSNR；
+真机 4032×3024 的对齐在 M3 的 `frame2_golden.json` 里以 FNV-1a
+checksum + 64 探针逐样本验收过，不在 CI 重跑。
+
+## 支持什么、不支持什么（与代码实际行为对齐）
+
+**支持**：单帧静态图、**I 帧**、**8bit**、**4:2:0**、HEVC Main /
+Main Still Picture（`profile_idc` 1 / 3）、HEIF 容器、单 slice 单 tile
+无 WPP、`nclx` 的 BT.601 / BT.709 / BT.2020 矩阵（含 limited / full
+range、PQ / HLG 最简 SDR 映射）、`irot` / `imir` / `clap`、`auxC` alpha、
+`colr`/`prof` 的 ICC 原样带进 `iCCP` / APP2、RGBA8 / RGBA16 PNG、
+质量可调的 baseline JPEG（4:4:4，无子采样）。
+
+**不支持（明确列出，代码一律拒绝而不是解出似是而非的像素）**：
+
+| 不支持 | 拒绝位置 / 退出码 |
+|---|---|
+| P / B 帧、运动补偿、DPB | `decode_i_frame` → `NotISlice` / 2 |
+| 10 / 12bit、Main 10、RExt | `hvcC` + SPS 双层护栏 → 2 |
+| 4:2:2 / 4:4:4、4:0:0 | `hvcC` + SPS 双层护栏 → 2 |
+| 编码器、HEIC 视频序列 | 无此入口 |
+| 多帧 grid / 多图平铺 | `item_type == "grid"` → 2 |
+| 多 slice 拼接、dependent slice、entry points | `decode_i_frame` → `NotImplemented` / 2 |
+| tiles、WPP（波前并行） | `decode_i_frame` → `NotImplemented` / 2 |
+| `scc` / 3D / multilayer 扩展、`cross_component_prediction` | `parse_sps` / `parse_pps` → 2 |
+| EXIF 方向（只认 `irot`/`imir`，不读 Exif item） | 不处理 |
+| 花式色度上采样（只有最邻近） | 固定行为 |
+| 花式 HDR 色调映射（PQ/HLG 只做 1000-nit 最简映射） | 固定行为 |
+| PNG 隔行 / 调色板 / JPEG 色度子采样 / 渐进 JPEG | 不产出 |
+| 非 HEVC 的 HEIF（AV1 / JPEG / 未压缩） | `is_hevc` / 2 |
+
+畸形码流一律显式 `DecodeError` / `Decode(3)`，不 trap——`heif/testdata/malformed/`
+与 `hevc/malformed_test.mbt` 是这一条的回归用例。
+
+## 上游版权声明（MIT）
+
+本工程移植自 [`PaiHL/h265`](https://github.com/PaiHL/h265)（即
+[`gen2brain/h265`](https://github.com/gen2brain/h265) 的 Go 实现），它本身是
+[`roticv/rust_h265`](https://github.com/roticv/rust_h265) 的 Go 移植。上游按
+**MIT License** 发布，版权声明必须随本移植保留：
+
+```
+MIT License
+
+Copyright (c) 2025 roticv
+Copyright (c) 2026 Karpeles Lab Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+上游完整 LICENSE 见 <https://github.com/PaiHL/h265/blob/master/LICENSE>。
+本仓库自身代码采用 Apache-2.0（见 `LICENSE`），但与移植部分一起分发时
+上述 MIT 声明一并生效。
+
+## HEVC 专利提示
+
+HEVC / H.265 受多个专利池（MPEG LA / Access Advance 等）覆盖。**本项目
+不授予任何专利权利**，也不对「使用本解码器是否需要授权」作任何陈述。
+上面的 MIT / Apache-2.0 只覆盖软件著作权，不覆盖标准必要专利。对外分发、
+商用部署前请自行取得相应许可。
+
+## 已知限制（性能记录）
+
+`cmd/bench` 把同一张 64×64 I 帧 HEIC 编译进每个后端，测的是**完整
+`convert()` 墙钟**（容器 → M3 → M4 → PNG），不含进程启动。以下为
+`tools/e2e/run.mjs` 在 CI 同款 debian 容器、MoonBit
+`0.1.20261102`、debug 构建下的一次实测（数值随机器波动，只看量级）：
+
+| 后端 | 解码耗时 | 可执行产物体积 |
+|---|---|---|
+| native | ~6.3 ms/call | 2 789 472 B |
+| wasm | ~5.7 ms/call | 688 797 B |
+| wasm-gc | ~4.3 ms/call | 408 071 B |
+| js | ~42 ms/call | 731 784 B |
+
+- **单线程**：M3 按 Issue 的「放弃 WPP/tiles 并行」锁死，没有真线程 /
+  Cond，解码是单线程；`-j` 只并行**多个独立文件**，不加速单张图。
+- **SIMD 全废**：上游 7242 行汇编一行用不上，`v128` 重写推迟到 M5 之后。
+- **js 后端明显慢**：数值按 JS 语义走，解码约为 native 的 6~7 倍耗时。
+- **大图**：4032×3024 能解完不崩（M3 有 FNV checksum 验收），但 CI 不跑，
+  e2e 冒烟只用 16×16。
+- **CLI 的文件系统能力是 native / wasm only**：`@fs` / `@stdio` 在
+  wasm-gc / js 目标上没有实现。`cmd/bench` 改用内嵌固件 + `println` +
+  `@env.now`，因此四个后端都能编译和跑；但 `heic2png` / `heicinfo`
+  这两个命令只在 native / wasm 上真正可用。这是 MoonBit 当前异步运行时的
+  边界，不是解码器的边界。
