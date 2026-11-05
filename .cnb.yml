@@ -60,6 +60,7 @@
         - name: m3 golden fixtures are current
           script:
             - node tools/gen_m3_golden.mjs --check
+            - node tools/gen_recon_golden.mjs --check
 
   pull_request:
     - <<: *moonbit
@@ -108,3 +109,4 @@
         - name: m3 golden fixtures are current
           script:
             - node tools/gen_m3_golden.mjs --check
+            - node tools/gen_recon_golden.mjs --check

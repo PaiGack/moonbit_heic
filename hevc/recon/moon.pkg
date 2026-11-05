@@ -1,0 +1,10 @@
+import {
+  "nrzhangsan/heic/safe",
+  "nrzhangsan/heic/hevc/dsp",
+}
+
+import {
+  "nrzhangsan/heic/hevc/recon",
+} for "test"
+
+pkgtype(kind: "library")
