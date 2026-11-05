@@ -114,6 +114,15 @@
             - node tools/gen_scaling_golden.mjs --check
             - node tools/crosscheck_scaling.mjs
 
+        # M4 end-to-end: a real M3 I-frame HEVC stream is wrapped in a minimal
+        # HEIC, decoded through M1/M3, colour-converted and written as PNG
+        # (8/16-bit) and JPEG. The self-test checks the emitted containers
+        # and their declared geometry without an external image library.
+        - name: m4 cli end-to-end
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - node tools/m4_cli_selftest.mjs
+
   pull_request:
     - <<: *moonbit
       stages:
@@ -214,3 +223,11 @@
             # independent JS transcription.
             - node tools/gen_scaling_golden.mjs --check
             - node tools/crosscheck_scaling.mjs
+        # M4 end-to-end: a real M3 I-frame HEVC stream is wrapped in a minimal
+        # HEIC, decoded through M1/M3, colour-converted and written as PNG
+        # (8/16-bit) and JPEG. The self-test checks the emitted containers
+        # and their declared geometry without an external image library.
+        - name: m4 cli end-to-end
+          script:
+            - export PATH="$HOME/.moon/bin:$PATH"
+            - node tools/m4_cli_selftest.mjs

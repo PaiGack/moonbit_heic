@@ -3,9 +3,10 @@
 MoonBit 移植自 [gen2brain/h265](https://github.com/gen2brain/h265)，
 一个纯 Go 的 HEVC 视频 / HEIC 图像编解码器。
 
-当前进度：M0（工程骨架 + `safe/`）、M1（HEIF / ISOBMFF 容器）与
+当前进度：M0（工程骨架 + `safe/`）、M1（HEIF / ISOBMFF 容器）、
 M2（HEVC 头解析：NAL / AnnexB / hvcC 分帧、位读取、VPS / SPS / PPS、
-slice segment header）已完成。所有字段与上游逐项对齐。M3 正自底向上
+slice segment header）与 M4（色彩转换 + PNG/JPEG 输出）已完成。
+所有字段与上游逐项对齐。M3 正自底向上
 分层落地：CABAC 算术解码器（179 上下文、Table 9-4/9-46/9-47 逐条对齐）、
 系数扫描表与逆变换基矩阵、反量化 / 2D 逆变换 / 35 种帧内预测（recon 层）、
 残差系数语法 7.3.8.11（residual 层，真实 CABAC 码流对拍）、环路滤波内核
@@ -124,15 +125,44 @@ hevc/geometry/     CTU 空间状态 6.5.2/6.4.1/8.6.1/8.4.4.2.2（M3 已实现�
 hevc/reconstruct/  单块重建链路：残差码流→像素（M3 已实现，含 scaling/TS/bypass）
 hevc/ctu/          CTU quadtree/TU/PU 语法主循环（M3 已实现，含 SAO/PCM/bypass 语法）
 hevc/decode/       Yuv420p8 / decode_i_frame：整帧解码入口（M3 已接通全工具子集）
-color/             YUV→RGB、色域（M4）
-io/png/ io/jpeg/   输出编码（M4）
+color/             YUV→RGB、色域、transfer、alpha（M4 已实现）
+image/             irot/imir/clap 与 render 编排（M4 已实现）
+io/png/            PNG 8/16bit 编码、zlib、iCCP（M4 已实现）
+io/jpeg/           baseline JPEG、质量可调、APP2 ICC（M4 已实现）
 cmd/heicinfo/      CLI：容器侦察（M1）
-cmd/heic2png/      CLI（M5）
+cmd/heic2png/      CLI：M1→M3→M4 端到端出 PNG/JPEG（M4 已接通）
 tools/parity/      对拍脚本 + 固件
+tools/build_m4_heic.mjs / m4_cli_selftest.mjs   M4 端到端自检
 ```
 
 `preferred_target` 在 `moon.mod` 里设为 `wasm`——浏览器里解图是这个项目
 最有说服力的叙事。
+
+## M4：从 YUV 到能看的图
+
+`decode_i_frame` 吐出 `Yuv420p8` 之后，M4 把它变成 PNG / JPEG：
+
+- `color/`：BT.601 / BT.709 / BT.2020 三套矩阵（`nclx` 的
+  `matrix_coefficients` 选择）、limited / full range、4:2:0 最邻近上采样、
+  PQ / HLG 的最简 SDR 映射、alpha 平面合成。整数定点，`safe/` 管尺寸。
+- `image/`：MIAF 7.3.6.7 顺序——先 `clap` 裁剪，再 `irot`（0/90/180/270）、
+  `imir`（水平/垂直），最后交给编码器。
+- `io/png/`：自写 chunk 层，支持 RGBA8 / RGBA16（`pixi` 说 10bit 时出
+  16bit 容器）、可控 DEFLATE 级别（复用 MoonBit core 的 `compress/zlib`）、
+  CRC-32、以及 `colr`/`prof` 的 ICC profile 原样塞进 `iCCP`。
+- `io/jpeg/`：自写 baseline 编码器，RGB→YCbCr→8×8 DCT→质量可调量化→
+  标准 Huffman 表，4:4:4 无色度子采样，`0xFF` 字节填充，ICC 走 `APP2`。
+  JPEG 没有 alpha，透明像素合成到白底。
+
+```bash
+moon run cmd/heic2png -- photo.heic              # 默认 8-bit PNG
+moon run cmd/heic2png -- --16bit photo.heic      # 16-bit 容器
+moon run cmd/heic2png -- --jpeg --quality 90 photo.heic out.jpg
+```
+
+`tools/m4_cli_selftest.mjs` 把 M3 的真实 I 帧码流包成最小 HEIC，跑通
+容器 → 解码 → 色彩 → 编码全链路，并校验 PNG/JPEG 头与几何尺寸；PNG 和
+JPEG 的像素另由 Pillow 外部解码验收。
 
 ## 为什么要 `safe/`
 

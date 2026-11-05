@@ -1,4 +1,9 @@
 import {
+  "moonbitlang/core/math",
+  "nrzhangsan/heic/safe",
+}
+
+import {
   "nrzhangsan/heic/color",
 } for "test"
 
