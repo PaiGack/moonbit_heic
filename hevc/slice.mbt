@@ -231,7 +231,19 @@ pub fn parse_slice_header(
   sps : SPS,
   pps : PPS,
 ) -> SliceHeader raise Error {
-  let rbsp = nal_payload(nal)
+  parse_slice_header_rbsp(nal_payload(nal), nal_type, sps, pps)
+}
+
+///|
+/// Parses a slice header from an already-unescaped RBSP (the shape
+/// `split_annex_b` / `split_hvcc` produce). `parse_access_unit` uses this so
+/// the payload is not unescaped a second time.
+pub fn parse_slice_header_rbsp(
+  rbsp : Bytes,
+  nal_type : NALType,
+  sps : SPS,
+  pps : PPS,
+) -> SliceHeader raise Error {
   let c = GetBits::new(rbsp)
 
   let h : SliceHeader = { ..default_slice_header(), nal_type, }

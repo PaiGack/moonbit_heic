@@ -1,0 +1,80 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "nrzhangsan/heic/hevc/ctu"
+
+import {
+  "nrzhangsan/heic/hevc/cabac",
+  "nrzhangsan/heic/hevc/geometry",
+  "nrzhangsan/heic/hevc/reconstruct",
+}
+
+// Values
+pub fn decode_ctu_frame(@cabac.Decoder, @geometry.Geometry, CtuParams, CtuPlanes, @reconstruct.ReconConfig) -> Result[Unit, CtuError]
+
+pub let frame_cases : Array[FrameCase]
+
+// Errors
+
+// Types and methods
+pub(all) enum CtuError {
+  BadBin
+  BadSyntax
+  BadGeometry
+  UnsupportedTool
+  BadReconstruct
+}
+
+pub(all) struct CtuParams {
+  width : Int32
+  height : Int32
+  ctb_log2 : Int32
+  min_cb_log2 : Int32
+  min_tb_log2 : Int32
+  max_tb_log2 : Int32
+  max_tr_hier_intra : Int32
+  slice_qp_y : Int32
+  cb_qp_offset : Int32
+  cr_qp_offset : Int32
+  cu_qp_delta_enabled : Bool
+  diff_cu_qp_delta_depth : Int32
+  sign_data_hiding : Bool
+  strong_intra_smoothing : Bool
+  intra_smoothing_disabled : Bool
+  cu_chroma_qp_offset : Bool
+  chroma_qp_offset_list_len : Int32
+  cb_qp_offset_list : Array[Int32]
+  cr_qp_offset_list : Array[Int32]
+  sao_luma : Bool
+  sao_chroma : Bool
+}
+
+pub(all) struct CtuPlanes {
+  y : Array[Int32]
+  cb : Array[Int32]
+  cr : Array[Int32]
+  stride_y : Int32
+  stride_c : Int32
+}
+
+pub(all) struct FrameCase {
+  name : String
+  stream : Bytes
+  yuv : Bytes
+  width : Int32
+  height : Int32
+  has_ref : Bool
+  trace : Array[TbTrace]
+}
+
+pub(all) struct TbTrace {
+  x : Int32
+  y : Int32
+  log2 : Int32
+  c_idx : Int32
+  mode : Int32
+  cbf : Bool
+  qp : Int32
+}
+
+// Type aliases
+
+// Traits

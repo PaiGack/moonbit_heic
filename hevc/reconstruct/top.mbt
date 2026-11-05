@@ -31,6 +31,38 @@ pub(all) enum ReconstructError {
 }
 
 ///|
+/// Per-picture switches the CTU loop threads into a single-block
+/// reconstruction. The single-block golden tests use `default()` (all off),
+/// which is exactly the Main 8-bit 4:2:0 non-extended case those fixtures
+/// were exported for; a real I frame derives them from its SPS/PPS.
+pub(all) struct ReconConfig {
+  /// `sign_data_hiding_enabled_flag` of the PPS: changes the residual
+  /// coefficient syntax (7.3.8.11 sign hiding), not just the arithmetic.
+  sign_data_hiding : Bool
+  /// `strong_intra_smoothing_enabled_flag` of the SPS (8.4.4.2.3).
+  strong_intra_smoothing : Bool
+  /// `intra_smoothing_disabled_flag` of the SPS.
+  intra_smoothing_disabled : Bool
+  /// `transquant_bypass_enabled_flag` of the PPS.
+  transquant_bypass : Bool
+  /// `log2_max_transform_skip_size` of the PPS; zero keeps the tool off.
+  max_transform_skip_size : Int32
+}
+
+///|
+/// The configuration every single-block golden fixture was exported under:
+/// no sign hiding, no strong smoothing, no bypass, no transform skip.
+pub fn ReconConfig::default() -> ReconConfig {
+  {
+    sign_data_hiding: false,
+    strong_intra_smoothing: false,
+    intra_smoothing_disabled: false,
+    transquant_bypass: false,
+    max_transform_skip_size: 0,
+  }
+}
+
+///|
 /// Clip3 on the 32-bit sample carrier.
 fn clip3(v : Int32, lo : Int32, hi : Int32) -> Int32 {
   if v < lo {
@@ -87,6 +119,7 @@ pub fn reconstruct_block(
   qp : Int32,
   dec : @cabac.Decoder,
   cbf : Bool,
+  config : ReconConfig,
 ) -> Result[Unit, ReconstructError] {
   if log2_size < 2 || log2_size > 5 || c_idx < 0 || c_idx > 2 {
     return Err(InvalidBlock)
@@ -99,11 +132,18 @@ pub fn reconstruct_block(
   }
 
   // 8.4.4.2.2 gather + substitute, then 8.4.4.2.3 smoothing and 8.4.4.2
-  // prediction. chroma_array_type is 1 (4:2:0); strong intra smoothing is off
-  // and intra smoothing is not disabled for Main 8-bit, matching the upstream.
+  // prediction. chroma_array_type is 1 (4:2:0); the smoothing switches come
+  // from the picture's SPS via `config`.
   let gathered = @geometry.gather_ref(geom, plane, stride, x, y, n, c_idx, 2, 2)
   let r = @recon.RefSamples::new(n, gathered.s)
-  r.filter_ref(mode, c_idx, 8, 1, false, false)
+  r.filter_ref(
+    mode,
+    c_idx,
+    8,
+    1,
+    config.strong_intra_smoothing,
+    config.intra_smoothing_disabled,
+  )
   let pred = @recon.intra_predict(r, mode, c_idx, 8)
   for j in 0..<n {
     for i in 0..<n {
@@ -121,10 +161,17 @@ pub fn reconstruct_block(
     c_idx,
     pred_mode_intra: mode,
     intra: true,
-    transquant_bypass: false,
-    max_transform_skip_size: 0,
+    transquant_bypass: config.transquant_bypass,
+    max_transform_skip_size: config.max_transform_skip_size,
   }
-  let params = @residual.ResidualParams::main_420_8bit()
+  let params : @residual.ResidualParams = {
+    persistent_rice_adaptation: false,
+    chroma_array_type: 1,
+    coeff_range: 0,
+    sign_data_hiding: config.sign_data_hiding,
+    transform_skip_enabled: config.max_transform_skip_size > 0,
+    transform_skip_context: false,
+  }
   let stat = [0, 0, 0, 0]
   match @residual.decode_residual(dec, coef, block, params, stat) {
     Ok(_) => ()

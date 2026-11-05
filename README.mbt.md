@@ -13,10 +13,13 @@ slice segment header）已完成。所有字段与上游逐项对齐。M3 正自
 （syntax 层：SAO / 帧内模式 / cu_qp_delta / cu_chroma_qp_offset / part_mode /
 split·cbf 上下文与 8.4.2 MPM，真实 Go 编码器码流往返对拍）、CTU 空间状态
 （geometry 层：6.5.2 MinTbAddrZs / 6.4.1 邻域可用性 / 8.6.1 qPY_PRED /
-8.4.4.2.2 参考样本收集），以及第一次真正产出像素的单块重建链路
+8.4.4.2.2 参考样本收集），第一次真正产出像素的单块重建链路
 （reconstruct 层：把已验证的 geometry + recon + residual + CABAC 串成
-「一段真实残差码流 → 一个变换块的像素」，逐样本对拍上游 reconstructPlane）。
-`Yuv420p8` 与 `decode_i_frame` 的接口契约同步。
+「一段真实残差码流 → 一个变换块的像素」，逐样本对拍上游 reconstructPlane），
+以及把它们接成整帧的 CTU quadtree/TU/PU 语法主循环（ctu 层：按 7.3.8 的
+bin 顺序驱动 quadtree → CU → transformTree → transformUnit，每个变换块调
+`reconstruct_block`）。`decode_i_frame` 现在对单 slice、单 tile、无 WPP 的
+Main 8bit 4:2:0 I 帧真正返回 `Yuv420p8`，与上游 `*_ref.yuv` 逐像素一致。
 
 M1 只搬字节，不解码：给它一个 iPhone `.heic`，它告诉你「主图是哪个 item、
 载荷在文件哪个偏移、多长、编码参数是什么」。
@@ -60,17 +63,22 @@ residual 层的 122488 个值（含 118 条真实 CABAC 码流逐系数解码）
 模式真实码流往返）都与 Go 上游零差异；geometry 层的 14759 个值（36 组完整
 MinTbAddrZs 表 / 6400 次邻域可用性 / 45 次 qPY_PRED / 9 组参考样本）与独立
 JS 转录零差异，reconstruct 层的 17 个单块场景（luma+chroma、log2 2~4、
-真实残差码流）由 MoonBit 侧用已验证内核逐样本复现上游解码器输出。每层 golden 固件在 CI 里都有
-`--check`，另有独立 JS 转录 crosscheck，手改一个字节就红。
+真实残差码流）由 MoonBit 侧用已验证内核逐样本复现上游解码器输出。整帧层把
+13 个上游小 I 固件（16×16~64×64，含 quadtree 深度、4/8/16/32 TU、
+cu_qp_delta、sign hiding、强帧内平滑、多 CTB 邻域）交给真实 Go 解码器
+`DecodeNAL + Flush` 产出最终 planar YUV，并对其中 8 个带 `*_ref.yuv` 的
+固件逐字节断言；MoonBit `decode_i_frame` 对这 13 帧逐像素 byte-exact
+复现，trace 里 300 个变换块的坐标/模式/QP/cbf 由真实 `codingTreeUnit`
+导出作调试 oracle。每层 golden 固件在 CI 里都有 `--check`，另有独立 JS
+转录 crosscheck，手改一个字节就红。
 
-下一步：把 CTU 的 quadtree/TU/PU 语法主循环接进 `decode_i_frame`，按序
-调用 syntax 层的解析，把每个变换单元的 CABAC 子码流喂给 `reconstruct_block`
-产出像素，再驱动 loopfilter 层的去块与 SAO，串成整帧重建主链路，接上
-`*_ref.yuv` 逐像素 MD5 验收。在这之前它对合法的 I 帧返回
-`DecodeError::NotImplemented`，不伪造像素——接口形状、profile 校验、畸形
-码流拒绝、YUV 平面分配，以及从 SPS/PPS/片头派生并接进 decode 路径的
-recon / loopfilter / syntax / geometry 参数都已就位；单块「码流→像素」的
-闭环已经在 `hevc/reconstruct` 里对拍通过。
+下一步：把工具子集补齐到能覆盖 iPhone 4032×3024 I 帧——多 slice / 单
+tile 拼接、SAO 语法解析与帧级 SAO 应用、去块边界状态（8.7.2 的 BS/阈值
+驱动，内核已逐值对拍）、PCM、scaling list、transform skip、transquant
+bypass，以及 WPP/tiles 并行。目前 `decode_i_frame` 对打开这些工具的码流
+返回 `DecodeError`（不伪造像素），对多 slice 也明确拒绝；已接通的子集
+是单 slice、单 tile、无 WPP、无 SAO/PCM/scaling-list/transform-skip/
+transquant-bypass 的纯 I 帧，这部分已经 `*_ref.yuv` 逐像素验收通过。
 
 ## 工程结构
 
@@ -90,7 +98,8 @@ hevc/loopfilter/   去块 8.7.2 + SAO 8.7.3（M3 已实现，整帧真值对拍�
 hevc/syntax/       CTU 级 CABAC 语法元素 7.3.8.2~10（M3 已实现，真实码流往返对拍）
 hevc/geometry/     CTU 空间状态 6.5.2/6.4.1/8.6.1/8.4.4.2.2（M3 已实现，逐值对拍）
 hevc/reconstruct/  单块重建链路：残差码流→像素（M3 已实现，逐样本对拍上游）
-hevc/decode/       Yuv420p8 / decode_i_frame 契约（M3），CTU 主循环待接
+hevc/ctu/          CTU quadtree/TU/PU 语法主循环（M3 已实现，整帧逐像素对拍）
+hevc/decode/       Yuv420p8 / decode_i_frame：整帧解码入口（M3 已接通 I 帧子集）
 color/             YUV→RGB、色域（M4）
 io/png/ io/jpeg/   输出编码（M4）
 cmd/heicinfo/      CLI：容器侦察（M1）

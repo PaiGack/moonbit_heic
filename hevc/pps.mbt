@@ -56,7 +56,15 @@ pub(all) struct PPS {
 ///|
 /// Parses a picture parameter set from a NAL unit, header included.
 pub fn parse_pps(nal : Bytes) -> PPS raise Error {
-  let c = GetBits::new(nal_payload(nal))
+  parse_pps_rbsp(nal_payload(nal))
+}
+
+///|
+/// Parses a PPS from an already-unescaped RBSP (the shape
+/// `split_annex_b` / `split_hvcc` produce). `parse_access_unit` uses this so
+/// the payload is not unescaped a second time.
+pub fn parse_pps_rbsp(rbsp : Bytes) -> PPS raise Error {
+  let c = GetBits::new(rbsp)
 
   let p : PPS = {
     id: 0,

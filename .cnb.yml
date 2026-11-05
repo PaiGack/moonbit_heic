@@ -83,6 +83,13 @@
             # port reproduces the reconstruction pixels sample for sample.
             - node tools/gen_reconstruct_golden.mjs --check
             - node tools/crosscheck_reconstruct.mjs
+            # Whole-frame CTU reconstruction: real upstream Go DecodeNAL
+            # output (asserted against the shipped *_ref.yuv) for 13 small
+            # I frames. The MoonBit decode_i_frame reproduces every YUV
+            # sample; crosscheck pins the stream/YUV bytes and the 300-TB
+            # trace shape independently (no Go/network).
+            - node tools/gen_frame_golden.mjs --check
+            - node tools/crosscheck_frame.mjs
 
   pull_request:
     - <<: *moonbit
@@ -154,3 +161,10 @@
             # port reproduces the reconstruction pixels sample for sample.
             - node tools/gen_reconstruct_golden.mjs --check
             - node tools/crosscheck_reconstruct.mjs
+            # Whole-frame CTU reconstruction: real upstream Go DecodeNAL
+            # output (asserted against the shipped *_ref.yuv) for 13 small
+            # I frames. The MoonBit decode_i_frame reproduces every YUV
+            # sample; crosscheck pins the stream/YUV bytes and the 300-TB
+            # trace shape independently (no Go/network).
+            - node tools/gen_frame_golden.mjs --check
+            - node tools/crosscheck_frame.mjs

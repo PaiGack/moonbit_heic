@@ -16,7 +16,15 @@ pub(all) struct VPS {
 /// `split_annex_b` and `split_hvcc` return them. A payload handed straight
 /// over, header already removed, is taken as is.
 pub fn parse_vps(nal : Bytes) -> VPS raise Error {
-  let c = GetBits::new(nal_payload(nal))
+  parse_vps_rbsp(nal_payload(nal))
+}
+
+///|
+/// Parses a VPS from an already-unescaped RBSP (the shape
+/// `split_annex_b` / `split_hvcc` produce). `parse_access_unit` uses this so
+/// the payload is not unescaped a second time.
+pub fn parse_vps_rbsp(rbsp : Bytes) -> VPS raise Error {
+  let c = GetBits::new(rbsp)
   let v : VPS = {
     id: c.bits(4).reinterpret_as_int(),
     max_layers_minus1: 0,

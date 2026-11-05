@@ -9,7 +9,7 @@ import {
 // Values
 pub let recon_cases : Array[ReconCase]
 
-pub fn reconstruct_block(@geometry.Geometry, Array[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32, @cabac.Decoder, Bool) -> Result[Unit, ReconstructError]
+pub fn reconstruct_block(@geometry.Geometry, Array[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32, @cabac.Decoder, Bool, ReconConfig) -> Result[Unit, ReconstructError]
 
 // Errors
 
@@ -28,6 +28,15 @@ pub(all) struct ReconCase {
   pred_plane : Array[Int32]
   plane_out : Array[Int32]
 }
+
+pub(all) struct ReconConfig {
+  sign_data_hiding : Bool
+  strong_intra_smoothing : Bool
+  intra_smoothing_disabled : Bool
+  transquant_bypass : Bool
+  max_transform_skip_size : Int32
+}
+pub fn ReconConfig::default() -> Self
 
 pub(all) enum ReconstructError {
   InvalidBlock
