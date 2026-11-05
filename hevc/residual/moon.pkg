@@ -1,0 +1,10 @@
+import {
+  "nrzhangsan/heic/hevc/cabac",
+  "nrzhangsan/heic/hevc/dsp",
+}
+
+import {
+  "nrzhangsan/heic/hevc/residual",
+} for "test"
+
+pkgtype(kind: "library")
