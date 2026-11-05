@@ -4,13 +4,13 @@
 // To add a dependency, run this command in your terminal:
 //   moon add moonbitlang/x
 
-name = "nrzhangsan/heic"
+name = "PaiGack/heic"
 
 version = "0.1.0"
 
 readme = "README.mbt.md"
 
-repository = "https://cnb.cool/nrzhangsan/monbit_tmp"
+repository = "https://github.com/PaiGack/moonbit_heic"
 
 license = "Apache-2.0"
 
@@ -18,4 +18,4 @@ keywords = [ "hevc", "h265", "codec" ]
 
 preferred_target = "wasm"
 
-description = "MoonBit port of gen2brain/h265: HEVC bitstream headers and NAL parsing"
+description = "HEVC bitstream headers and NAL parsing"
