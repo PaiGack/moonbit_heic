@@ -59,6 +59,9 @@
         # fixtures while disagreeing with the upstream.
         - name: m3 golden fixtures are current
           script:
+            # The generators compare against a moon fmt-formatted copy of the
+            # golden, so moon must be on PATH here too (as in other stages).
+            - export PATH="$HOME/.moon/bin:$PATH"
             - node tools/gen_m3_golden.mjs --check
             - node tools/gen_recon_golden.mjs --check
             # Residual golden is Go-encoder truth; crosscheck re-derives all
@@ -157,6 +160,9 @@
         # fixtures while disagreeing with the upstream.
         - name: m3 golden fixtures are current
           script:
+            # The generators compare against a moon fmt-formatted copy of the
+            # golden, so moon must be on PATH here too (as in other stages).
+            - export PATH="$HOME/.moon/bin:$PATH"
             - node tools/gen_m3_golden.mjs --check
             - node tools/gen_recon_golden.mjs --check
             # Residual golden is Go-encoder truth; crosscheck re-derives all

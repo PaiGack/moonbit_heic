@@ -196,9 +196,12 @@ function formatted(text) {
   try {
     execFileSync('moon', ['fmt', tmp], { stdio: 'ignore' });
   } catch (e) {
-    // A standalone .mbt outside a package may not format; fall back to the
-    // raw text (the golden uses ///| blocks, which fmt leaves as-is when the
-    // arrays are already short enough).
+    fs.unlinkSync(tmp);
+    throw new Error(
+      'moon fmt is required to verify golden fixtures; ' +
+      'ensure moon is on PATH (export PATH="$HOME/.moon/bin:$PATH"). ' +
+      `Underlying error: ${e.message}`
+    );
   }
   const r = fs.readFileSync(tmp, 'utf8');
   fs.unlinkSync(tmp);
@@ -215,6 +218,14 @@ if (check) {
   console.log(`frame2 golden OK (${raw.cases.length} cases)`);
 } else {
   fs.writeFileSync(target, out);
-  try { execFileSync('moon', ['fmt', target], { stdio: 'ignore' }); } catch (e) {}
+  try {
+    execFileSync('moon', ['fmt', target], { stdio: 'ignore' });
+  } catch (e) {
+    throw new Error(
+      'moon fmt is required to write formatted golden fixtures; ' +
+      'ensure moon is on PATH (export PATH="$HOME/.moon/bin:$PATH"). ' +
+      `Underlying error: ${e.message}`
+    );
+  }
   console.log(`wrote ${target} (${raw.cases.length} cases)`);
 }
