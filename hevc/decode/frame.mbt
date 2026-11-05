@@ -83,9 +83,14 @@ pub fn alloc_frame(sps : @hevc.SPS) -> Result[Yuv420p8, DecodeError] {
 /// are byte-exact checked in `hevc/loopfilter`, and `loop_filter_params`
 /// already derives beta/tc through `@loopfilter.beta_tc` from there.
 ///
-/// What is still unwired is the top of the chain: the CABAC-driven CTU/TU/PU
-/// syntax loop that reconstructs the pixels those layers then filter. A valid
-/// I frame therefore ends in NotImplemented. Returning an error here is
+/// The CTU-level CABAC syntax elements of 7.3.8.2..7.3.8.10 (SAO, intra
+/// modes, cu_qp_delta, cu_chroma_qp_offset, part_mode, split/cbf context
+/// indices) are byte-exact checked in `hevc/syntax` and their per-picture
+/// switches derived by `syntax_params`. What is still unwired is the very top
+/// of the chain: the CABAC-driven quadtree/TU/PU loop that walks the CTBs,
+/// calls those parses in order, reconstructs the pixels, and then drives
+/// deblock_frame / sao_frame. A valid I frame therefore ends in
+/// NotImplemented. Returning an error here is
 /// deliberate: a port that fabricates pixels is worse than one that says the
 /// work is unfinished, and a malformed stream must never reach an unchecked
 /// array index.
@@ -125,5 +130,13 @@ pub fn decode_i_frame(
   // verified loopfilter kernel into the decode path; the CTU loop that drives
   // deblock_frame / sao_frame over the reconstructed pixels is still unwired.
   let _lf = loop_filter_params(au.slices[0].header)
+  // The CTU-level CABAC syntax layer is byte-exact checked in hevc/syntax:
+  // SAO, intra luma/chroma modes, cu_qp_delta, cu_chroma_qp_offset, part_mode
+  // and the split/cbf context derivations. Deriving its per-picture switches
+  // here (through the checked split_tf_ctx / cbf_luma_ctx / qp_wrap kernels)
+  // wires that layer into the decode path too. What is still unwired is the
+  // quadtree/TU/PU syntax loop that walks the CTBs and calls these parses in
+  // order, reconstructs the pixels, then drives deblock_frame / sao_frame.
+  let _sy = syntax_params(sps, pps, au.slices[0].header)
   Err(NotImplemented)
 }

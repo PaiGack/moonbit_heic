@@ -70,6 +70,12 @@
             # independent JS transcription (no Go/network).
             - node tools/gen_loopfilter_golden.mjs --check
             - node tools/crosscheck_loopfilter.mjs
+            # CTU-level CABAC syntax (7.3.8.2..7.3.8.10) golden is real
+            # upstream Go pure derivations + cabacWriter/ctuDecoder round
+            # trips; crosscheck re-derives all 1739 values from an independent
+            # JS transcription (no Go/network).
+            - node tools/gen_syntax_golden.mjs --check
+            - node tools/crosscheck_syntax.mjs
 
   pull_request:
     - <<: *moonbit
@@ -128,3 +134,9 @@
             # independent JS transcription (no Go/network).
             - node tools/gen_loopfilter_golden.mjs --check
             - node tools/crosscheck_loopfilter.mjs
+            # CTU-level CABAC syntax (7.3.8.2..7.3.8.10) golden is real
+            # upstream Go pure derivations + cabacWriter/ctuDecoder round
+            # trips; crosscheck re-derives all 1739 values from an independent
+            # JS transcription (no Go/network).
+            - node tools/gen_syntax_golden.mjs --check
+            - node tools/crosscheck_syntax.mjs

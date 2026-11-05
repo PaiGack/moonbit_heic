@@ -1,0 +1,9 @@
+import {
+  "nrzhangsan/heic/hevc/cabac",
+}
+
+import {
+  "nrzhangsan/heic/hevc/syntax",
+} for "test"
+
+pkgtype(kind: "library")

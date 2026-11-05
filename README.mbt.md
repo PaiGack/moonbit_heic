@@ -8,7 +8,10 @@ M2（HEVC 头解析：NAL / AnnexB / hvcC 分帧、位读取、VPS / SPS / PPS�
 slice segment header）已完成。所有字段与上游逐项对齐。M3 正自底向上
 分层落地：CABAC 算术解码器（179 上下文、Table 9-4/9-46/9-47 逐条对齐）、
 系数扫描表与逆变换基矩阵、反量化 / 2D 逆变换 / 35 种帧内预测（recon 层）、
-残差系数语法 7.3.8.11（residual 层，真实 CABAC 码流对拍），以及
+残差系数语法 7.3.8.11（residual 层，真实 CABAC 码流对拍）、环路滤波内核
+（loopfilter 层，整帧上游真值对拍）、CTU 级 CABAC 语法元素 7.3.8.2~7.3.8.10
+（syntax 层：SAO / 帧内模式 / cu_qp_delta / cu_chroma_qp_offset / part_mode /
+split·cbf 上下文与 8.4.2 MPM，真实 Go 编码器码流往返对拍），以及
 `Yuv420p8` 与 `decode_i_frame` 的接口契约。
 
 M1 只搬字节，不解码：给它一个 iPhone `.heic`，它告诉你「主图是哪个 item、
@@ -48,13 +51,17 @@ chroma_format_idc~, bit_depth_luma~)`，把拒绝的原因说清楚，而不是�
 M3 的这几层都用上游 Go 的真值和独立生成的 golden 码流逐 bin / 逐值对拍：
 CABAC 的 8400 个 bin 与独立算术编码器写的码流逐位一致；扫描表、变换矩阵、
 1D 逆变换对齐上游断言；recon 层的 222000 个值与 Go 上游未导出函数零差异；
-residual 层的 122488 个值（含 118 条真实 CABAC 码流逐系数解码）与 Go 编码器
-零差异。每层 golden 固件在 CI 里都有 `--check`，手改一个字节就红。
+residual 层的 122488 个值（含 118 条真实 CABAC 码流逐系数解码）、loopfilter
+层的 126834 个值（含 7 个整帧场景）、syntax 层的 1739 个值（含 1260 条帧内
+模式真实码流往返）都与 Go 上游零差异。每层 golden 固件在 CI 里都有
+`--check`，另有独立 JS 转录 crosscheck，手改一个字节就红。
 
-下一步：把 CTU/TU/PU 的 CABAC 语法循环、去块滤波与 SAO 接进
-`decode_i_frame`，再把上面这些已验证的层串成重建主链路。在这之前它对合法的
-I 帧返回 `DecodeError::NotImplemented`，不伪造像素——接口形状、profile 校验、
-畸形码流拒绝和 YUV 平面分配已经就位。
+下一步：把 CTU 的 quadtree/TU/PU 语法主循环接进 `decode_i_frame`，按序
+调用 syntax 层的解析、recon 层的重建 DSP、loopfilter 层的去块与 SAO，串成
+重建主链路。在这之前它对合法的 I 帧返回 `DecodeError::NotImplemented`，不
+伪造像素——接口形状、profile 校验、畸形码流拒绝、YUV 平面分配，以及从
+SPS/PPS/片头派生并接进 decode 路径的 recon / loopfilter / syntax 参数都已
+就位。
 
 ## 工程结构
 
@@ -70,7 +77,9 @@ hevc/cabac/        CABAC 算术解码器（M3 已实现，逐 bin 对拍）
 hevc/dsp/          扫描表与逆变换基矩阵（M3 已实现）
 hevc/recon/        反量化 / 2D 逆变换 / 帧内预测（M3 已实现，逐值对拍）
 hevc/residual/     残差系数语法 7.3.8.11（M3 已实现，真实码流对拍）
-hevc/decode/       Yuv420p8 / decode_i_frame 契约（M3），CTU 重建待接
+hevc/loopfilter/   去块 8.7.2 + SAO 8.7.3（M3 已实现，整帧真值对拍）
+hevc/syntax/       CTU 级 CABAC 语法元素 7.3.8.2~10（M3 已实现，真实码流往返对拍）
+hevc/decode/       Yuv420p8 / decode_i_frame 契约（M3），CTU 主循环待接
 color/             YUV→RGB、色域（M4）
 io/png/ io/jpeg/   输出编码（M4）
 cmd/heicinfo/      CLI：容器侦察（M1）

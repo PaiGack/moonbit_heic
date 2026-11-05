@@ -15,6 +15,8 @@ pub fn loop_filter_params(@hevc.SliceHeader) -> LoopFilterParams
 
 pub fn recon_params(@hevc.SPS, @hevc.PPS, @hevc.SliceHeader) -> ReconParams
 
+pub fn syntax_params(@hevc.SPS, @hevc.PPS, @hevc.SliceHeader) -> SyntaxParams
+
 // Errors
 
 // Types and methods
@@ -57,6 +59,23 @@ pub(all) struct ReconParams {
   sao_luma : Bool
   sao_chroma : Bool
   deblocking_disabled : Bool
+}
+
+pub(all) struct SyntaxParams {
+  cu_qp_delta_enabled : Bool
+  diff_cu_qp_delta_depth : Int32
+  cu_chroma_qp_offset_enabled : Bool
+  chroma_qp_offset_list_len : Int32
+  sao_scale_luma : Int32
+  sao_scale_chroma : Int32
+  sign_data_hiding : Bool
+  transform_skip_enabled : Bool
+  min_tb_log2 : Int32
+  max_tb_log2 : Int32
+  root_split_tf_ctx : Int32
+  cbf_luma_root_ctx : Int32
+  cbf_luma_nested_ctx : Int32
+  qp_y_wrapped : Int32
 }
 
 pub(all) struct Yuv420p8 {
