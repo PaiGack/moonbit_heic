@@ -76,6 +76,13 @@
             # JS transcription (no Go/network).
             - node tools/gen_syntax_golden.mjs --check
             - node tools/crosscheck_syntax.mjs
+            # Geometry + single-block reconstruction: real upstream Go
+            # buildMinTbAddr/available/predictQP/gatherRef and reconstructPlane
+            # (real residual bitstreams -> pixels). crosscheck re-derives the
+            # geometry half from an independent JS transcription; the MoonBit
+            # port reproduces the reconstruction pixels sample for sample.
+            - node tools/gen_reconstruct_golden.mjs --check
+            - node tools/crosscheck_reconstruct.mjs
 
   pull_request:
     - <<: *moonbit
@@ -140,3 +147,10 @@
             # JS transcription (no Go/network).
             - node tools/gen_syntax_golden.mjs --check
             - node tools/crosscheck_syntax.mjs
+            # Geometry + single-block reconstruction: real upstream Go
+            # buildMinTbAddr/available/predictQP/gatherRef and reconstructPlane
+            # (real residual bitstreams -> pixels). crosscheck re-derives the
+            # geometry half from an independent JS transcription; the MoonBit
+            # port reproduces the reconstruction pixels sample for sample.
+            - node tools/gen_reconstruct_golden.mjs --check
+            - node tools/crosscheck_reconstruct.mjs
