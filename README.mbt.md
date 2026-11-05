@@ -22,7 +22,11 @@ bin 顺序驱动 quadtree → CU → transformTree → transformUnit，每个变
 Main 8bit 4:2:0 I 帧真正返回 `Yuv420p8`，与上游 `*_ref.yuv` 逐像素一致；
 帧级去块（8.7.2）也已接进 decode 路径：CTU 主循环记录真实的 TU/PU 边界、
 每 4×4 块 QP 与 cbf/noFilter，`deblock_frame` 据此只滤真正的边缘，
-`encoder_lossy_32x32.h265` 的 109 个像素变化由上游完整解码 YUV 逐字节验收。
+`encoder_lossy_32x32.h265` 的 109 个像素变化由上游完整解码 YUV 逐字节验收；
+最后一层把 SAO 语法/应用、scaling list、PCM、transform skip、transquant
+bypass、cu_chroma_qp_offset 全部接进 CTU 主循环与 decode 路径，14 帧端到端
+固件（含 4032×3024 大图）逐像素 / 指纹对齐上游，`decode_i_frame` 对单 slice
+单 tile 无 WPP 的 Main 8bit 4:2:0 I 帧已完整交付。
 
 M1 只搬字节，不解码：给它一个 iPhone `.heic`，它告诉你「主图是哪个 item、
 载荷在文件哪个偏移、多长、编码参数是什么」。
@@ -79,13 +83,26 @@ slice I 帧分别产出「含去块 / 关去块」的整帧 YUV 并 hook 出去�
 独立重算指纹、差异数与边界状态不变量。每层 golden 固件在 CI 里都有
 `--check`，另有独立 JS 转录 crosscheck，手改一个字节就红。
 
-下一步：把工具子集补齐到能覆盖 iPhone 4032×3024 I 帧——多 slice / 单
-tile 拼接、SAO 语法解析与帧级 SAO 应用、PCM、scaling list、transform skip、
-transquant bypass，以及 WPP/tiles 并行。8.7.2 帧级去块驱动已接进 decode
-路径并端到端逐像素验收；目前 `decode_i_frame` 对打开其余这些工具的码流
-返回 `DecodeError`（不伪造像素），对多 slice 也明确拒绝；已接通的子集
-是单 slice、单 tile、无 WPP、无 SAO/PCM/scaling-list/transform-skip/
-transquant-bypass 的纯 I 帧，这部分已经 `*_ref.yuv` 逐像素验收通过。
+M3 收尾这一层把交付清单里剩下的工具全部接通并端到端 byte-exact 验收：
+SAO 语法（7.3.8.3，含 mergeLeft/mergeUp）与帧级应用（8.7.3，每 CTB 每分量
+独立参数）、scaling list（7.4.5 派生 factors 表，8.6.3 进 dequant）、
+PCM（7.3.8.7 / 8.4.4.1，pcmOffset 对齐后重启 CABAC 且保留上下文）、
+transform skip、transquant bypass（cu_transquant_bypass_flag，残差直通
+无缩放无变换）、cu_chroma_qp_offset。外加 1280×720 / 1920×1088 /
+4032×3024 三档规模验收——Issue 要的「单张 iPhone 4032×3024 I 帧能解完不崩」
+由真实 Go 解码器产出第一帧 planar YUV、MoonBit `decode_i_frame` 用 FNV-1a
+checksum + 64 个探针逐样本对齐。固件共 14 帧：`sao.h265` /
+`scaling_list.h265` / `pcm.h265` 带上游 `*_ref.yuv` 权威真值，
+两帧 SAO 真生效（1226 / 5976 像素变化）由上游编码器生成、
+`transquant_bypass_64x64` / `tskip_128x128` / `signhide_scaling_320x240`
+等由真实 Go 解码器给真值；每层同样有 golden `--check` + 独立 JS
+crosscheck（指纹 / FNV / 16384 个 scaling factor 值零差异）。
+
+范围边界：接受单 slice、单 tile、无 WPP 的 Main 8bit 4:2:0 纯 I 帧，
+且上述工具全部打开也照解。多 slice 拼接、tiles、WPP 仍明确返回
+`DecodeError`（不伪造像素）——tiles/WPP 是 Issue「单线程（放弃 WPP/tiles
+并行）」锁死的范围外；带权威 `*_ref.yuv` 的多 slice 固件全都同时开 WPP，
+留作后续。畸形码流一律 `DecodeError`，不 trap。
 
 ## 工程结构
 
@@ -101,12 +118,12 @@ hevc/cabac/        CABAC 算术解码器（M3 已实现，逐 bin 对拍）
 hevc/dsp/          扫描表与逆变换基矩阵（M3 已实现）
 hevc/recon/        反量化 / 2D 逆变换 / 帧内预测（M3 已实现，逐值对拍）
 hevc/residual/     残差系数语法 7.3.8.11（M3 已实现，真实码流对拍）
-hevc/loopfilter/   去块 8.7.2 + SAO 8.7.3（M3 已实现，去块已接进 decode 路径）
+hevc/loopfilter/   去块 8.7.2 + SAO 8.7.3（M3 已实现，均已接进 decode 路径）
 hevc/syntax/       CTU 级 CABAC 语法元素 7.3.8.2~10（M3 已实现，真实码流往返对拍）
 hevc/geometry/     CTU 空间状态 6.5.2/6.4.1/8.6.1/8.4.4.2.2（M3 已实现，逐值对拍）
-hevc/reconstruct/  单块重建链路：残差码流→像素（M3 已实现，逐样本对拍上游）
-hevc/ctu/          CTU quadtree/TU/PU 语法主循环（M3 已实现，记录真实去块边界状态）
-hevc/decode/       Yuv420p8 / decode_i_frame：整帧解码入口（M3 已接通 I 帧子集）
+hevc/reconstruct/  单块重建链路：残差码流→像素（M3 已实现，含 scaling/TS/bypass）
+hevc/ctu/          CTU quadtree/TU/PU 语法主循环（M3 已实现，含 SAO/PCM/bypass 语法）
+hevc/decode/       Yuv420p8 / decode_i_frame：整帧解码入口（M3 已接通全工具子集）
 color/             YUV→RGB、色域（M4）
 io/png/ io/jpeg/   输出编码（M4）
 cmd/heicinfo/      CLI：容器侦察（M1）

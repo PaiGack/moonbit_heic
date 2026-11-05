@@ -134,6 +134,22 @@ pub fn Decoder::new(data : Bytes, off : Int32) -> Decoder raise InvalidInit {
 }
 
 ///|
+/// 9.3.1 / 7.3.8.7: restart the arithmetic decoder at a byte boundary (the
+/// word after a PCM block) while KEEPING the context states. Upstream
+/// cabac.init only resets low/rng/pos; the contexts carry across PCM.
+pub fn Decoder::restart_at(
+  self : Decoder,
+  off : Int32,
+) -> Unit raise InvalidInit {
+  guard off >= 0 && off + 2 <= self.data.length() else { raise InvalidInit }
+  self.low = (self.data[off].to_uint() << 18) +
+    (self.data[off + 1].to_uint() << 10) +
+    (1U << 9)
+  self.rng = 0x1FEU
+  self.pos = off + 2
+}
+
+///|
 /// `initContexts` of 9.3.2.2: all 179 contexts from one Table 9-4 row.
 pub fn Decoder::init_contexts(
   self : Decoder,

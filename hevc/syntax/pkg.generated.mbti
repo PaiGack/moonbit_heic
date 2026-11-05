@@ -34,6 +34,8 @@ pub let ctx_cu_chroma_qp_offset_idx : Int32
 
 pub let ctx_cu_qp_delta : Int32
 
+pub let ctx_cu_transquant_bypass_flag : Int32
+
 pub let ctx_idx_cases : Array[CtxIdxCase]
 
 pub let ctx_intra_chroma_pred_mode : Int32

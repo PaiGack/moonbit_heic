@@ -34,6 +34,7 @@ pub fn Decoder::decode_terminate(Self) -> Int32
 pub fn Decoder::init_contexts(Self, Int32, Int32, Bool) -> Unit
 pub fn Decoder::new(Bytes, Int32) -> Self raise InvalidInit
 pub fn Decoder::pcm_offset(Self) -> Int32
+pub fn Decoder::restart_at(Self, Int32) -> Unit raise InvalidInit
 pub fn Decoder::states(Self) -> Array[Int32]
 
 pub(all) struct GoldenCase {

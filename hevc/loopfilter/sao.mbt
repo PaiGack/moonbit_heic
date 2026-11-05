@@ -66,10 +66,10 @@ pub(all) enum SaoError {
 /// 8.7.3 over the whole picture. `params` has one entry per CTB (row-major),
 /// shared by the three colour components as 7.3.8.3 gives Cb/Cr one type and
 /// class between them. Returns Err on a malformed picture rather than trapping.
-pub fn sao_frame(
+fn sao_frame_impl(
   planes : Planes,
   st : FilterState,
-  params : Array[SaoParams],
+  get_param : (Int32, Int32) -> SaoParams,
   sao_on : Bool,
 ) -> Result[Unit, SaoError] {
   if !sao_on {
@@ -90,9 +90,6 @@ pub fn sao_frame(
   let ctb_size = 1 << st.ctb_log2
   let ctbs_x = (w + ctb_size - 1) / ctb_size
   let ctbs_y = (h + ctb_size - 1) / ctb_size
-  if params.length() == 0 {
-    return Ok(())
-  }
   // One src copy per component, taken before any writes so every offset reads
   // the picture exactly as deblocking left it.
   let src_y = planes.y.copy()
@@ -123,10 +120,7 @@ pub fn sao_frame(
     for ctb_y in 0..<ctbs_y {
       for ctb_x in 0..<ctbs_x {
         let ctb = ctb_y * ctbs_x + ctb_x
-        if ctb >= params.length() {
-          continue
-        }
-        let p = params[ctb]
+        let p = get_param(ctb, c_idx)
         if p.type_idx == 0 {
           continue
         }
@@ -289,4 +283,51 @@ fn sao_sample(
     let k = if cat > 0 { cat + 1 } else { cat + 2 }
     plane[y * stride + x] = clip3(v + p.offset[k], 0, 255)
   }
+}
+
+///|
+/// 8.7.3 over the whole picture with one shared SaoParams per CTB (the
+/// synthetic golden fixtures use this shape: every component gets the same
+/// type/class/offset). Returns Err on a malformed picture rather than trapping.
+pub fn sao_frame(
+  planes : Planes,
+  st : FilterState,
+  params : Array[SaoParams],
+  sao_on : Bool,
+) -> Result[Unit, SaoError] {
+  sao_frame_impl(
+    planes,
+    st,
+    fn(ctb : Int32, _c_idx : Int32) -> SaoParams { params[ctb] },
+    sao_on,
+  )
+}
+
+///|
+/// 8.7.3 over the whole picture with per-CTB, per-component SAO parameters
+/// (7.3.8.3), as a real I-frame stream codes them. `params[ctb][cIdx]` is
+/// the syntax-decoded parameter set for that CTB and colour component; the
+/// slice flags decide whether luma / chroma is enabled at all. This is the
+/// entry point the decode path drives after deblocking.
+pub fn sao_frame_components(
+  planes : Planes,
+  st : FilterState,
+  params : Array[Array[SaoParams]],
+  sao_luma : Bool,
+  sao_chroma : Bool,
+) -> Result[Unit, SaoError] {
+  sao_frame_impl(
+    planes,
+    st,
+    fn(ctb : Int32, c_idx : Int32) -> SaoParams {
+      if ctb >= params.length() || c_idx >= params[ctb].length() {
+        { type_idx: 0, class: 0, band: 0, offset: [0, 0, 0, 0], }
+      } else if (c_idx == 0 && !sao_luma) || (c_idx > 0 && !sao_chroma) {
+        { type_idx: 0, class: 0, band: 0, offset: [0, 0, 0, 0], }
+      } else {
+        params[ctb][c_idx]
+      }
+    },
+    true,
+  )
 }

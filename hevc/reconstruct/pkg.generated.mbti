@@ -11,6 +11,8 @@ pub let recon_cases : Array[ReconCase]
 
 pub fn reconstruct_block(@geometry.Geometry, Array[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32, @cabac.Decoder, Bool, ReconConfig) -> Result[Unit, ReconstructError]
 
+pub fn reconstruct_block_full(@geometry.Geometry, Array[Int32], Int32, Int32, Int32, Int32, Int32, Int32, Int32, @cabac.Decoder, Bool, ReconConfig, Bool) -> Result[Unit, ReconstructError]
+
 // Errors
 
 // Types and methods
@@ -35,6 +37,12 @@ pub(all) struct ReconConfig {
   intra_smoothing_disabled : Bool
   transquant_bypass : Bool
   max_transform_skip_size : Int32
+  scaling : Array[Array[Array[Int32]]]
+  scaling_enabled : Bool
+  transquant_bypass_enabled : Bool
+  transform_skip_rotation : Bool
+  transform_skip_enabled : Bool
+  transform_skip_context : Bool
 }
 pub fn ReconConfig::default() -> Self
 

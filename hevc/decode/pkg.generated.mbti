@@ -16,6 +16,36 @@ pub fn ctu_frame_input(@hevc.SPS, @hevc.PPS, @hevc.SliceHeader, Bytes) -> Result
 
 pub fn decode_i_frame(@hevc.SPS, @hevc.PPS, @hevc.AccessUnit) -> Result[Yuv420p8, DecodeError]
 
+pub let frame2_case_0 : Frame2Case
+
+pub let frame2_case_1 : Frame2Case
+
+pub let frame2_case_10 : Frame2Case
+
+pub let frame2_case_11 : Frame2Case
+
+pub let frame2_case_12 : Frame2Case
+
+pub let frame2_case_13 : Frame2Case
+
+pub let frame2_case_2 : Frame2Case
+
+pub let frame2_case_3 : Frame2Case
+
+pub let frame2_case_4 : Frame2Case
+
+pub let frame2_case_5 : Frame2Case
+
+pub let frame2_case_6 : Frame2Case
+
+pub let frame2_case_7 : Frame2Case
+
+pub let frame2_case_8 : Frame2Case
+
+pub let frame2_case_9 : Frame2Case
+
+pub let frame2_cases : Array[Frame2Case]
+
 pub fn geometry_params(@hevc.SPS, @hevc.SliceHeader) -> GeometryParams
 
 pub fn loop_filter_params(@hevc.SliceHeader) -> LoopFilterParams
@@ -33,6 +63,8 @@ pub(all) struct CtuFrameInput {
   config : @reconstruct.ReconConfig
   qp_y : Int32
   slice_data : Bytes
+  sao_luma : Bool
+  sao_chroma : Bool
 }
 
 pub(all) enum DecodeError {
@@ -41,6 +73,21 @@ pub(all) enum DecodeError {
   NotISlice
   TooLarge
   NotImplemented
+}
+
+pub(all) struct Frame2Case {
+  name : String
+  stream : Bytes
+  yuv : Bytes
+  width : Int32
+  height : Int32
+  has_ref : Bool
+  big : Bool
+  yuv_sha : String
+  probes : Array[(Int32, Int32)]
+  checksum : String
+  nonzero : Int32
+  stream_sha : String
 }
 
 pub(all) struct FrameBuffer {
@@ -99,14 +146,8 @@ pub(all) struct SyntaxParams {
 }
 
 pub(all) enum UnsupportedCtuTool {
-  Sao
-  Pcm
-  TransformSkip
-  ScalingList
-  TransquantBypass
   Tiles
   Wpp
-  CuChromaQpOffset
 }
 
 pub(all) struct Yuv420p8 {

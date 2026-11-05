@@ -168,6 +168,8 @@ pub fn sao_edge_row(Array[Int32], Array[Int32], Array[Int32], Array[Int32], Int3
 
 pub fn sao_frame(Planes, FilterState, Array[SaoParams], Bool) -> Result[Unit, SaoError]
 
+pub fn sao_frame_components(Planes, FilterState, Array[Array[SaoParams]], Bool, Bool) -> Result[Unit, SaoError]
+
 // Errors
 
 // Types and methods

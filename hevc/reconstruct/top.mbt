@@ -47,6 +47,20 @@ pub(all) struct ReconConfig {
   transquant_bypass : Bool
   /// `log2_max_transform_skip_size` of the PPS; zero keeps the tool off.
   max_transform_skip_size : Int32
+  /// 7.4.5 ScalingFactor tables: [size_id 0..3][matrix_id 0..5][n*n].
+  /// Derived from the SPS/PPS scaling list. Empty when the tool is off.
+  scaling : Array[Array[Array[Int32]]]
+  /// `scaling_list_enabled_flag` of the SPS.
+  scaling_enabled : Bool
+  /// `cu_transquant_bypass_enabled_flag` of the PPS: when true, the CTU
+  /// loop reads one bypass bin per coding unit and passes the result in.
+  transquant_bypass_enabled : Bool
+  /// `transform_skip_rotation_enabled_flag` of the SPS (8.6.2).
+  transform_skip_rotation : Bool
+  /// `transform_skip_enabled_flag` of the PPS. Gates the transform_skip bin.
+  transform_skip_enabled : Bool
+  /// `transform_skip_context_enabled_flag` of the SPS (9.3.4.2.5).
+  transform_skip_context : Bool
 }
 
 ///|
@@ -59,6 +73,12 @@ pub fn ReconConfig::default() -> ReconConfig {
     intra_smoothing_disabled: false,
     transquant_bypass: false,
     max_transform_skip_size: 0,
+    scaling: [],
+    scaling_enabled: false,
+    transquant_bypass_enabled: false,
+    transform_skip_rotation: false,
+    transform_skip_enabled: false,
+    transform_skip_context: false,
   }
 }
 
@@ -88,6 +108,17 @@ fn add_residual(
   bit_depth : Int32,
 ) -> Unit {
   let max_v = (1 << bit_depth) - 1
+  // 8.6.2 bdShift: with shift <= 0 (a transquant-bypassed unit) the
+  // coefficients are the residual directly, with no rounding or shift.
+  if shift <= 0 {
+    for j in 0..<n {
+      for i in 0..<n {
+        let idx = (y + j) * stride + x + i
+        plane[idx] = clip3(plane[idx] + coef[j * n + i], 0, max_v)
+      }
+    }
+    return
+  }
   let rnd = 1 << (shift - 1)
   for j in 0..<n {
     for i in 0..<n {
@@ -107,7 +138,66 @@ fn add_residual(
 /// This is the smallest closed loop from a CABAC substream to YUV samples;
 /// the CTU quadtree driver will call it once per transform unit, threading a
 /// shared decoder and shared geometry across the picture.
-pub fn reconstruct_block(
+fn pick_scaling(
+  config : ReconConfig,
+  log2_size : Int32,
+  c_idx : Int32,
+  skip : Bool,
+) -> Array[Int32]? {
+  if !config.scaling_enabled || (skip && log2_size > 2) {
+    return None
+  }
+  let size_id = log2_size - 2
+  if size_id < 0 || size_id >= config.scaling.length() {
+    return None
+  }
+  let mut matrix_id = c_idx // M3 is always intra
+  if size_id == 3 && c_idx > 0 {
+    matrix_id = 0
+  }
+  if matrix_id < 0 || matrix_id >= config.scaling[size_id].length() {
+    return None
+  }
+  Some(config.scaling[size_id][matrix_id])
+}
+
+///|
+/// 8.6.2 `transformSkip`: scale coefficients by 2^(5 + log2(n)); the 4x4
+/// intra rotation reverses the block end for end when the SPS enables it.
+fn transform_skip(
+  coef : Array[Int32],
+  rotate : Bool,
+  log2_size : Int32,
+) -> Unit {
+  let shift = 5 + log2_size
+  if rotate {
+    let n = coef.length()
+    let mut i = 0
+    let mut j = n - 1
+    while i < j {
+      let a = coef[i]
+      let b = coef[j]
+      coef[i] = b << shift
+      coef[j] = a << shift
+      i += 1
+      j -= 1
+    }
+    if n % 2 == 1 {
+      coef[n / 2] = coef[n / 2] << shift
+    }
+  } else {
+    for i in 0..<coef.length() {
+      coef[i] = coef[i] << shift
+    }
+  }
+}
+
+///|
+/// Full reconstruction of one intra transform block. `bypass` is the
+/// `cu_transquant_bypass_flag` the CTU loop read for this coding unit: a
+/// bypassed block takes its coefficients as the residual with no scaling and
+/// no transform. This is the entry point the CTU driver calls.
+pub fn reconstruct_block_full(
   geom : @geometry.Geometry,
   plane : Array[Int32],
   stride : Int32,
@@ -120,6 +210,7 @@ pub fn reconstruct_block(
   dec : @cabac.Decoder,
   cbf : Bool,
   config : ReconConfig,
+  bypass : Bool,
 ) -> Result[Unit, ReconstructError] {
   if log2_size < 2 || log2_size > 5 || c_idx < 0 || c_idx > 2 {
     return Err(InvalidBlock)
@@ -161,7 +252,7 @@ pub fn reconstruct_block(
     c_idx,
     pred_mode_intra: mode,
     intra: true,
-    transquant_bypass: config.transquant_bypass,
+    transquant_bypass: bypass,
     max_transform_skip_size: config.max_transform_skip_size,
   }
   let params : @residual.ResidualParams = {
@@ -169,18 +260,66 @@ pub fn reconstruct_block(
     chroma_array_type: 1,
     coeff_range: 0,
     sign_data_hiding: config.sign_data_hiding,
-    transform_skip_enabled: config.max_transform_skip_size > 0,
-    transform_skip_context: false,
+    transform_skip_enabled: config.transform_skip_enabled,
+    transform_skip_context: config.transform_skip_context,
   }
   let stat = [0, 0, 0, 0]
-  match @residual.decode_residual(dec, coef, block, params, stat) {
-    Ok(_) => ()
+  let skip = match @residual.decode_residual(dec, coef, block, params, stat) {
+    Ok(v) => v
     Err(_) => return Err(BadResidual)
   }
-  // Flat-16 default scaling list; 4x4 intra luma uses the DST (8.6.4.1).
-  @recon.dequant(coef, None, n, qp, 8, false)
+  if bypass {
+    // 8.6.2: a bypassed unit takes the coefficients as the residual, with no
+    // dequantisation, no transform and no bdShift (shift = 0).
+    let rotate = config.transform_skip_rotation && log2_size == 2 && c_idx == 0
+    if rotate {
+      let nn = coef.length()
+      let mut i = 0
+      let mut j = nn - 1
+      while i < j {
+        let t = coef[i]
+        coef[i] = coef[j]
+        coef[j] = t
+        i += 1
+        j -= 1
+      }
+    }
+    add_residual(plane, stride, x, y, n, 0, coef, 8)
+    return Ok(())
+  }
+  // 8.6.3 scaling: the selected 7.4.5 matrix, or flat-16 when there is none.
+  let m = pick_scaling(config, log2_size, c_idx, skip)
+  @recon.dequant(coef, m, n, qp, 8, false)
   let dst = c_idx == 0 && log2_size == 2
-  @recon.inverse_transform(coef, n, dst, 8, false)
+  if skip {
+    // 8.6.2 transformSkip: no 2D transform, just the coefficient scale.
+    let rotate = config.transform_skip_rotation && log2_size == 2 && c_idx == 0
+    transform_skip(coef, rotate, log2_size)
+  } else {
+    @recon.inverse_transform(coef, n, dst, 8, false)
+  }
   add_residual(plane, stride, x, y, n, 20 - 8, coef, 8)
   Ok(())
+}
+
+///|
+/// Reconstruction with transquant bypass off (the single-block golden
+/// fixtures and every caller that predates the M3 tool completion).
+pub fn reconstruct_block(
+  geom : @geometry.Geometry,
+  plane : Array[Int32],
+  stride : Int32,
+  x : Int32,
+  y : Int32,
+  log2_size : Int32,
+  mode : Int32,
+  c_idx : Int32,
+  qp : Int32,
+  dec : @cabac.Decoder,
+  cbf : Bool,
+  config : ReconConfig,
+) -> Result[Unit, ReconstructError] {
+  reconstruct_block_full(
+    geom, plane, stride, x, y, log2_size, mode, c_idx, qp, dec, cbf, config, false,
+  )
 }
